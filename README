@@ -1,30 +1,120 @@
-$ ./genpasswd -l 16 -d 2 -a 4 -A 4 -s 6 -m 0.5
-Symbols: 94
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
-Best entropy: 0.500000
- ___________________________________________________
-|          |                     |                  |
-| Entropy  |       Stats         | Password         |
-|__________|_____________________|__________________|
-| 0.500000 | d:02,a:04,A:04,s:06 | ^{&]pr}vI4PM1La* |
-| 0.500000 | d:02,a:04,A:04,s:06 | NS|`Yym0g"%i'O1* |
-| 0.500000 | d:02,a:04,A:04,s:06 | `T;l#8YJan1G\^b< |
-| 0.500000 | d:02,a:04,A:04,s:06 | 6JoxQ#f`\g9*Y,E_ |
-| 0.500000 | d:02,a:04,A:04,s:06 | GB_a5fc$(9^HDg=' |
-| 0.500000 | d:02,a:04,A:04,s:06 | (O.;9z0t<XpVS+x\ |
-| 0.500000 | d:02,a:04,A:04,s:06 | 8ko}.w%:)=MP9DVn |
-| 0.500000 | d:02,a:04,A:04,s:06 | @9"-YlkAg;C1e(Q& |
-| 0.500000 | d:02,a:04,A:04,s:06 | Av4j=t<]$ZVkB5)| |
-| 0.500000 | d:02,a:04,A:04,s:06 | F}l?md71]rY{#Q+W |
-| 0.500000 | d:02,a:04,A:04,s:06 | CU{av7!5H@x~\<Jd |
-| 0.500000 | d:02,a:04,A:04,s:06 | uV2i(AZ0?:*xlK>- |
-| 0.500000 | d:02,a:04,A:04,s:06 | {~\I([JtL8.R3dwg |
-| 0.500000 | d:02,a:04,A:04,s:06 | V7#Y.cf+Tq,d$D5[ |
-| 0.500000 | d:02,a:04,A:04,s:06 | rH,O>XG^2+$0e=oj |
-| 0.500000 | d:02,a:04,A:04,s:06 | 29A&d#\H>XiT?f$v |
-| 0.500000 | d:02,a:04,A:04,s:06 | nOU!=0~[ESq7rm)@ |
-| 0.500000 | d:02,a:04,A:04,s:06 | $MJ3+ij4|/VnT@o? |
-| 0.500000 | d:02,a:04,A:04,s:06 | #rBTbKi@E!1)[e5\ |
-| 0.500000 | d:02,a:04,A:04,s:06 | +*i|}yQ2V(r!RPt1 |
-| 0.500000 | d:02,a:04,A:04,s:06 | &YiL)Gc29Ee.q|/% |
+#
+# Generating passwords.
+#
+$ ./genpasswd
+~`|5N@^Y<O*c&UBu
+|3DNs0'SVi*H4@Ap
+Yf9)7ZywXcV,/mq_
+<&/UA7;:=_[+}p,.
+~%S[Fw_BD7{P/"Ru
+Yt+>F,_;0PVN%DS[
+nmUtqwd!1ocj@}$y
+FE&T}v~C<a359r-=
+ye@TX*vgJtbh1w?M
+"UH$L8aw+2:#Cr){
+"LUp@Yg4jr!RNBvI
 ...
+
+#
+# Generating passwords in a table with entropy and statistics.
+#
+$ genpasswd -l 16 -c 10 -t -v
+
+Symbols: 94
+Password length: 16
+Best entropy for length: 50.000000
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ ____________________________________________________
+|           |                     |                  |
+|  Entropy  |       Stats         | Password         |
+|___________|_____________________|__________________|
+| 50.000000 | d:01 a:04 A:05 s:06 | }C(%3DpH/R<Lcvk> |
+| 50.000000 | d:02 a:02 A:03 s:09 | `pSn):F*7(Q=?+2^ |
+| 50.000000 | d:01 a:03 A:05 s:07 | Wp?.-+A>%dJO6b&I |
+| 50.000000 | d:03 a:03 A:04 s:06 | ^?GI4|p5{tRY-9z] |
+| 50.000000 | d:01 a:05 A:05 s:05 | $geO3vI"Q,s_lE?P |
+| 50.000000 | d:02 a:03 A:04 s:07 | ]J<0u4#pL($;DK*j |
+| 50.000000 | d:02 a:04 A:02 s:08 | :/u'W`m<!8+nO6@h |
+| 50.000000 | d:02 a:04 A:06 s:04 | E3o#dBCP@FV/fv}7 |
+| 50.000000 | d:01 a:04 A:05 s:06 | [C1(|$dKe!XkgU?V |
+| 50.000000 | d:03 a:04 A:05 s:04 | G*gdpi<[7PJ2U:4A |
+|___________|_____________________|__________________|
+
+#
+# Generating passwors with at least 4 digits, 4 lower case letters,
+# four upper case letters and 4 special characters.
+#
+$ genpasswd -l 16 -c 10 -t -v -d 4 -a 4 -A 4 -s 4
+
+Symbols: 94
+Password length: 16
+Best entropy for length: 50.000000
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ ____________________________________________________
+ |           |                     |                  |
+ |  Entropy  |       Stats         | Password         |
+ |___________|_____________________|__________________|
+ | 50.000000 | d:04 a:04 A:04 s:04 | M2*58guH,JoQ<0q$ |
+ | 50.000000 | d:04 a:04 A:04 s:04 | WG>Z'xl@564N9#tv |
+ | 50.000000 | d:04 a:04 A:04 s:04 | k2!q(AfT}-r0DK98 |
+ | 50.000000 | d:04 a:04 A:04 s:04 | u5L"j/6O1X)<w7Kg |
+ | 50.000000 | d:04 a:04 A:04 s:04 | a&9;17dY2]FxU{Av |
+ | 50.000000 | d:04 a:04 A:04 s:04 | (?c3TLRvj28'@7yH |
+ | 50.000000 | d:04 a:04 A:04 s:04 | t,6PA9v]8qG7i^B* |
+ | 50.000000 | d:04 a:04 A:04 s:04 | 9w3V#S6vd[$,Z4Ho |
+ | 50.000000 | d:04 a:04 A:04 s:04 | T$ip75dK"RU94@r. |
+ | 50.000000 | d:04 a:04 A:04 s:04 | D,$zo1.70Ic~Gn4A |
+ |___________|_____________________|__________________|
+
+#
+# Generating passwors with at least 1 digits,
+# 1 lower case letters, and no other symbols.
+#
+$ genpasswd -l 16 -c 10 -t -v -d 1 -a 1
+
+Symbols: 36
+Password length: 16
+Best entropy for length: 50.000000
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyz
+ ____________________________________________________
+ |           |                     |                  |
+ |  Entropy  |       Stats         | Password         |
+ |___________|_____________________|__________________|
+ | 50.000000 | d:03 a:13 A:00 s:00 | vzd9yc2nljoh3qia |
+ | 50.000000 | d:06 a:10 A:00 s:00 | 5kiw81tyq06d4pah |
+ | 50.000000 | d:02 a:14 A:00 s:00 | 9ojdi8aytqswngbf |
+ | 50.000000 | d:03 a:13 A:00 s:00 | czwg0rhsk86uiead |
+ | 50.000000 | d:04 a:12 A:00 s:00 | mts1cyln28po3eif |
+ | 50.000000 | d:07 a:09 A:00 s:00 | daz3mcj0851o6fk7 |
+ | 50.000000 | d:04 a:12 A:00 s:00 | t3ghykc0px6meiu7 |
+ | 50.000000 | d:07 a:09 A:00 s:00 | 8g7e2qs9tu53zv1c |
+ | 50.000000 | d:05 a:11 A:00 s:00 | xv1p4le57sq2nmud |
+ | 50.000000 | d:02 a:14 A:00 s:00 | jh9krf2qsuaxevyn |
+ |___________|_____________________|__________________|
+
+#
+# Checking entropy generated by other password generators.
+# Password length has to be the same for both program for correct display.
+#
+$ pwgen -s -y 16 10 | ./genpasswd -l 16 -t -v --check-entropy
+
+Symbols: 94
+Password length: 16
+Best entropy for length: 50.000000
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ ____________________________________________________
+ |           |                     |                  |
+ |  Entropy  |       Stats         | Password         |
+ |___________|_____________________|__________________|
+ | 50.000000 | d:01 a:07 A:02 s:06 | w#q;|/i~V1*cLbxg |
+ | 48.142622 | d:02 a:02 A:06 s:06 | KK9KB1.=Wz!F#e&% |
+ | 48.437500 | d:03 a:04 A:03 s:06 | &126&/hZb"GvgL<< |
+ | 48.437500 | d:02 a:07 A:04 s:03 | xQfrQ9*fXzD?"py8 |
+ | 48.437500 | d:02 a:02 A:03 s:09 | %%i9|:RJ0/u?:}\N |
+ | 49.218750 | d:02 a:03 A:06 s:05 | 4-G&TcPy=Mz{M]9W |
+ | 49.218750 | d:01 a:05 A:07 s:03 | bKX.Tr3miW;qTV~A |
+ | 49.218750 | d:01 a:04 A:06 s:05 | WAIfE#d`[H0Ys@c[ |
+ | 48.437500 | d:02 a:05 A:05 s:04 | &Q8H~vSMggiW~5w| |
+ | 49.218750 | d:01 a:05 A:05 s:05 | J!"!tVCp-6fFq^gK |
+ |___________|_____________________|__________________|
+
