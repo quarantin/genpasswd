@@ -67,7 +67,7 @@ Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()
 
 #
 # Generating passwors with at least 4 digits, 4 lower case letters,
-# four upper case letters and 4 special characters.
+# 4 upper case letters, and 4 special characters.
 #
 $ genpasswd -l 16 -c 10 -t -v -d 4 -a 4 -A 4 -s 4
 
