@@ -14,6 +14,7 @@
  */
 #include <ctype.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,7 +75,10 @@ static void print_char (char c, size_t count, char *eol)
 static int random_num (unsigned char rand_max)
 {
 	ssize_t ret;
+	size_t limit;
 	unsigned char rand;
+
+	limit = UCHAR_MAX - ((UCHAR_MAX + 1) % rand_max);
 
 	do {
 		ret = read(urandom_fd, &rand, sizeof(rand));
@@ -84,9 +88,9 @@ static int random_num (unsigned char rand_max)
 			exit(EXIT_FAILURE);
 		}
 	}
-	while (rand >= rand_max);
+	while (rand > limit);
 
-	return rand;
+	return (rand % rand_max);
 }
 
 static double compute_entropy (const unsigned char *data, size_t datasz)
