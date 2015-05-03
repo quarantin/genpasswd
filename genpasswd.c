@@ -128,7 +128,6 @@ static double compute_best_entropy (struct config *conf, size_t pwdlen)
 	double entropy;
 	unsigned char *pwd;
 
-	printf("malloc(%lu)\n", pwdlen + 1);
 	pwd = malloc(pwdlen + 1);
 	if (!pwd) {
 		perror("malloc failed");
