@@ -22,7 +22,7 @@ Where options might be a combination of:
 	-v, --verbose               Verbose mode.
 
 #
-# Generating passwords.
+# Generating passwords (default length is 16).
 #
 $ genpasswd
 ~`|5N@^Y<O*c&UBu
@@ -39,7 +39,7 @@ ye@TX*vgJtbh1w?M
 ...
 
 #
-# Generating passwords in a table with entropy and statistics.
+# Generating 10 passwords, each 16 characters long, in a table with entropy and statistics.
 #
 $ genpasswd -l 16 -c 10 -t -v
 
