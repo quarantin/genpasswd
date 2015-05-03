@@ -124,7 +124,6 @@ static double compute_entropy (const unsigned char *data, size_t datasz)
 static int policy_ok (unsigned char *pwd, size_t pwdlen, struct pwd_policy *policy)
 {
 	size_t i;
-	double entropy;
 	int digit = 0, alpha = 0, ALPHA = 0, special = 0;
 
 	for (i = 0; i < pwdlen; i++) {
@@ -143,9 +142,7 @@ static int policy_ok (unsigned char *pwd, size_t pwdlen, struct pwd_policy *poli
 		}
 	}
 
-	//entropy = compute_entropy(pwd, pwdlen);
-	return //(entropy >= policy->min_entropy
-			/*&&*/ (digit   >= policy->min_digit
+	return (digit >= policy->min_digit
 			&& alpha   >= policy->min_alpha
 			&& ALPHA   >= policy->min_ALPHA
 			&& special >= policy->min_special);
