@@ -35,6 +35,8 @@ static size_t alphabet_size;
 
 static int opt_check_policy = 1;
 static int opt_check_entropy = 0;
+static int opt_table = 0;
+static int opt_verbose = 0;
 
 static void usage (char *name)
 {
@@ -53,7 +55,9 @@ static void usage (char *name)
 			"\t\t-m, --min-entropy <double>  minimum entropy for passwords.\n"
 			"\t\t-c, --check-entropy         don't generate passwords, instead check\n"
 			"\t\t                            entropy of passwords supplied through stdin.\n"
-			"\t\t-n, --no-policy             don't check password policy.\n",
+			"\t\t-n, --no-policy             don't check password policy.\n"
+			"\t\t-t, --table                 print passwords in a table with headers.\n"
+			"\t\t-v, --verbose               verbose mode.\n",
 			_name);
 
 	close(urandom_fd);
@@ -114,7 +118,7 @@ static double compute_entropy (const unsigned char *data, size_t datasz)
 		}
 	}
 
-	return entropy;
+	return entropy * 100;
 }
 
 static int policy_ok (unsigned char *pwd, size_t pwdlen, struct pwd_policy *policy)
@@ -139,15 +143,14 @@ static int policy_ok (unsigned char *pwd, size_t pwdlen, struct pwd_policy *poli
 		}
 	}
 
-	entropy = compute_entropy(pwd, pwdlen);
-	return (entropy >= policy->min_entropy
-			&& digit   >= policy->min_digit
+	//entropy = compute_entropy(pwd, pwdlen);
+	return //(entropy >= policy->min_entropy
+			/*&&*/ (digit   >= policy->min_digit
 			&& alpha   >= policy->min_alpha
 			&& ALPHA   >= policy->min_ALPHA
 			&& special >= policy->min_special);
 }
 
-/*
 static unsigned char *find_repetition (unsigned char *passwd, size_t passwdsz)
 {
 	size_t i, j;
@@ -161,14 +164,13 @@ static unsigned char *find_repetition (unsigned char *passwd, size_t passwdsz)
 
 	return NULL;
 }
-*/
 
 static unsigned char *gen_passwd (unsigned char *pwd, size_t pwdsz, struct pwd_policy *policy)
 {
 	size_t i;
 	size_t pwdlen = policy->pwdlen;
 
-	//unsigned char *ptr;
+	unsigned char *ptr;
 
 	if (!pwd || !pwdsz)
 		return NULL;
@@ -178,13 +180,15 @@ static unsigned char *gen_passwd (unsigned char *pwd, size_t pwdsz, struct pwd_p
 
 	pwd[pwdsz - 1] = 0;
 
-/*
-	do {
-		ptr = find_repetition(pwd, pwdlen);
-		if (ptr)
-			*ptr = alphabet[random_num(alphabet_size)];
-	} while (ptr);
-*/
+	if (policy->pwdlen <= alphabet_size) {
+
+		do {
+			ptr = find_repetition(pwd, pwdlen);
+			if (ptr)
+				*ptr = alphabet[random_num(alphabet_size)];
+		} while (ptr);
+	}
+
 	if (opt_check_policy && !policy_ok(pwd, pwdlen, policy))
 		return NULL;
 
@@ -271,15 +275,35 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 		else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--check-entropy")) {
 			opt_check_entropy = 1;
 		}
+		else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--table")) {
+			opt_table = 1;
+		}
+		else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
+			opt_verbose = 1;
+		}
 		else {
-			printf("FATAL: Invalid option: `%s'\n", argv[i]);
+			fprintf(stderr, "FATAL: Invalid option: `%s'\n", argv[i]);
 			usage(argv[0]);
 			return NULL;
 		}
 	}
 
-	if (!conf->policy.min_digit && !conf->policy.min_alpha && !conf->policy.min_ALPHA && !conf->policy.min_special)
-		conf->policy.min_digit = conf->policy.min_alpha = conf->policy.min_ALPHA = conf->policy.min_special = 1;
+	if (!conf->policy.pwdlen) {
+		fprintf(stderr, "FATAL: Invalid password length: Can't be zero.\n");
+		return NULL;
+	}
+
+	if (!conf->policy.min_digit
+			&& !conf->policy.min_alpha
+			&& !conf->policy.min_ALPHA
+			&& !conf->policy.min_special) {
+		switch (conf->policy.pwdlen) {
+			default: conf->policy.min_digit   = 1;
+			case 3:  conf->policy.min_special = 1;
+			case 2:  conf->policy.min_ALPHA   = 1;
+			case 1:  conf->policy.min_alpha   = 1;
+		}
+	}
 
 	build_alphabet(conf);
 	return conf;
@@ -296,17 +320,28 @@ static void get_pwd_stats (unsigned char *pwd, size_t pwdlen, struct pwd_policy 
 
 static void print_passwd (unsigned char *pwd, size_t pwdlen)
 {
-	struct pwd_policy stat;
+	if (!opt_table) {
+		printf("%s\n", pwd);
+	}
+	else {
+		int padding;
+		struct pwd_policy stat;
+		char *border = (opt_table ? "|" : "");
 
-	memset(&stat, 0, sizeof(stat));
-	get_pwd_stats(pwd, pwdlen, &stat);
-	printf("| %lf | d:%02d,a:%02d,A:%02d,s:%02d | %s |\n",
-			stat.entropy,
-			stat.min_digit,
-			stat.min_alpha,
-			stat.min_ALPHA,
-			stat.min_special,
-			pwd);
+		memset(&stat, 0, sizeof(stat));
+		get_pwd_stats(pwd, pwdlen, &stat);
+		printf("%s %lf | d:%02d,a:%02d,A:%02d,s:%02d | %s",
+				border,
+				stat.entropy,
+				stat.min_digit,
+				stat.min_alpha,
+				stat.min_ALPHA,
+				stat.min_special,
+				pwd);
+
+		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
+		print_char(' ', padding, border);
+	}
 }
 
 static void check_entropy (void)
@@ -322,6 +357,7 @@ static void check_entropy (void)
 
 		pwdlen = strlen(pwd);
 		print_passwd((unsigned char *)pwd, pwdlen);
+		memset(pwd, 0, pwdlen);
 	}
 }
 
@@ -333,6 +369,7 @@ static void generate_passwords (unsigned char *pwd, size_t pwdlen, struct config
 
 		if (gen_passwd(pwd, pwdlen + 1, &conf->policy)) {
 			print_passwd(pwd, pwdlen);
+			memset(pwd, 0, pwdlen);
 			i++;
 		}
 	}
@@ -340,10 +377,13 @@ static void generate_passwords (unsigned char *pwd, size_t pwdlen, struct config
 
 int main (int argc, char **argv)
 {
+	int pad;
 	size_t i, pwdlen;
 	unsigned char *pwd;
 	struct config conf;
 	double best_entropy;
+	char padspacer[32];
+	char padborder[32];
 	unsigned char entropy_buffer[256];
 
 	if (!argc || !argv || !*argv) {
@@ -378,14 +418,26 @@ int main (int argc, char **argv)
 	if (conf.policy.min_entropy == 0.0)
 		conf.policy.min_entropy = best_entropy;
 
-	printf("Symbols: %lu\n", alphabet_size);
-	printf("Alphabet: %s\n", alphabet);
-	printf("Best entropy: %lf\n", best_entropy);
+	if (opt_table && opt_verbose) {
+		printf("Symbols: %lu\n", alphabet_size);
+		printf("Alphabet: %s\n", alphabet);
+		printf("Password length: %lu\n", pwdlen);
+		printf("Best entropy for length: %lf\n", best_entropy);
+	}
 
-	printf(" ___________________________________"); print_char('_', pwdlen, "");
-	printf("|          |                     |  "); print_char(' ', pwdlen, "|");
-	printf("| Entropy  |       Stats         | Password "); print_char(' ', MAX(0, pwdlen - 8), "|");
-	printf("|__________|_____________________|__"); print_char('_', pwdlen, "|");
+	pad = (int)log10(best_entropy);
+	memset(padspacer, ' ', pad);
+	memset(padborder, '_', pad);
+	padspacer[pad] = 0;
+	padborder[pad] = 0;
+
+	pad = (pwdlen > 7) ? pwdlen : 8;
+	if (opt_table) {
+		printf(" _________%s__________________________",         padborder); print_char('_', pad, "");
+		printf("|         %s |                     |  ",         padspacer); print_char(' ', pad, "|");
+		printf("|  Entropy%s |       Stats         | Password ", padspacer); print_char(' ', MAX(0, pwdlen - 8), "|");
+		printf("|_________%s_|_____________________|__",         padborder); print_char('_', pad, "|");
+	}
 
 	if (opt_check_entropy) {
 		check_entropy();
@@ -394,7 +446,9 @@ int main (int argc, char **argv)
 		generate_passwords(pwd, pwdlen, &conf);
 	}
 
-	printf("\\__________|_____________________|__"); print_char('_', pwdlen, "/");
+	if (opt_table) {
+		printf("|_________%s_|_____________________|__", padborder); print_char('_', pad, "|");
+	}
 
 	free(pwd);
 	close(urandom_fd);
