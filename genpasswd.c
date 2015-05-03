@@ -104,17 +104,17 @@ static int random_num (unsigned char rand_max)
 static double compute_entropy (const unsigned char *data, size_t datasz)
 {
 	size_t i;
-	unsigned char stats[256];
 	double proba, entropy = 0.0;
+	unsigned char freqs[UCHAR_MAX + 1];
 
-	memset(stats, 0, sizeof(stats));
+	memset(freqs, 0, sizeof(freqs));
 
 	for (i = 0; i < datasz; i++)
-		stats[data[i]]++;
+		freqs[data[i]]++;
 
-	for (i = 0; i < sizeof(stats); i++) {
-		if (stats[i]) {
-			proba = (double)stats[i] / 256;
+	for (i = 0; i < sizeof(freqs); i++) {
+		if (freqs[i]) {
+			proba = (double)freqs[i] / sizeof(freqs);
 			entropy -= proba * log2(proba);
 		}
 	}
