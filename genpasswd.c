@@ -457,11 +457,14 @@ int main (int argc, char **argv)
 	if (conf.policy.min_entropy == 0.0)
 		conf.policy.min_entropy = best_entropy;
 
-	if (opt_table && opt_verbose) {
+	if (opt_verbose) {
+		printf("\n");
 		printf("Symbols: %lu\n", conf.alphabet_size);
-		printf("Alphabet: %s\n", conf.alphabet);
 		printf("Password length: %lu\n", pwdlen);
 		printf("Best entropy for length: %lf\n", best_entropy);
+		printf("Alphabet: %s\n", conf.alphabet);
+		if (!opt_table)
+			printf("\n");
 	}
 
 	pad = (int)log10(best_entropy);
