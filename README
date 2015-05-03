@@ -39,7 +39,8 @@ ye@TX*vgJtbh1w?M
 ...
 
 #
-# Generating 10 passwords, each 16 characters long, in a table with entropy and statistics.
+# Generating 10 passwords, each 16 characters long, in a table with entropy
+# and statistics.
 #
 $ genpasswd -l 16 -c 10 -t -v
 
