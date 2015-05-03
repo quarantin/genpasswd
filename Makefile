@@ -1,0 +1,10 @@
+CC=gcc
+CFLAGS=-Wall -Wextra -ggdb
+LIBS=-lm
+TARGET=genpasswd
+ 
+all:
+	$(CC) $(CFLAGS) $(TARGET).c -o $(TARGET) $(LIBS)
+
+clean:
+	rm -f $(TARGET)
