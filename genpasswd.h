@@ -33,7 +33,7 @@
 #define DEFAULT_PASSWD_COUNT 64
 
 #define LENGTH(x) (sizeof(x) - 1)
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
+#define MAX(x, y) ((int)(x) < (int)(y) ? (y) : (x))
  
 #define DIGIT_CHARS "0123456789"
 #define DIGIT_CHARS_LEN LENGTH(DIGIT_CHARS)
@@ -52,6 +52,7 @@ struct pwd_policy {
 	int min_alpha;
 	int min_ALPHA;
 	int min_special;
+	double entropy;
 	double min_entropy;
 	size_t pwdlen;
 };
