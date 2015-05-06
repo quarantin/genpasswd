@@ -170,6 +170,7 @@ static int policy_ok (struct pwd_policy *policy, unsigned char *pwd, size_t pwdl
 			&& special >= policy->min_special);
 }
 
+/*
 static int find_repetition (struct config *conf, unsigned char *pwd, size_t pwdlen)
 {
 	int found = 0;
@@ -190,10 +191,11 @@ static int find_repetition (struct config *conf, unsigned char *pwd, size_t pwdl
 
 	return found;
 }
+*/
 
 static unsigned char *gen_passwd (struct config *conf, unsigned char *pwd, size_t pwdsz)
 {
-	int found;
+	//int found;
 	size_t i;
 	size_t pwdlen = conf->policy.pwdlen;
 
@@ -205,8 +207,8 @@ static unsigned char *gen_passwd (struct config *conf, unsigned char *pwd, size_
 
 	pwd[pwdsz - 1] = 0;
 
-	while ((found = find_repetition(conf, pwd, pwdlen)))
-		;
+	//while ((found = find_repetition(conf, pwd, pwdlen)))
+	//	;
 
 	if (opt_check_policy && !policy_ok(&conf->policy, pwd, pwdlen))
 		return NULL;
