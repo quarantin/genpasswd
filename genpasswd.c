@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <locale.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <errno.h>
 #include <unistd.h>
+#include <wctype.h>
 
 #include "genpasswd.h"
 
@@ -42,13 +45,14 @@ static void usage (char *name)
 	if (name && *name)
 		_name = name;
 
-	fprintf(stderr, "Usage:\n\t%s [options]\n\n"
+	fwprintf(stderr, L"Usage:\n\t%s [options]\n\n"
 			"Where options might be a combination of:\n"
 			"\t-h, --help                  Show this help and exit.\n"
 			"\t-d, --digit <num>           Include at least <num> digits.\n"
 			"\t-a, --alpha <num>           Include at least <num> lower case letters.\n"
 			"\t-A, --ALPHA <num>           Include at least <num> upper case letters.\n"
 			"\t-s, --special <num>         Include at least <num> special characters.\n"
+			"\t-u, --utf8 <num>            Include at least <num> UTF-8 characters.\n"
 			"\t-l, --length <num>          Password length.\n"
 			"\t-m, --min-entropy <double>  Minimum entropy in bits.\n"
 			"\t-c, --count <num>           Number of passwords to generate.\n"
@@ -65,19 +69,29 @@ static void usage (char *name)
 	exit(EXIT_SUCCESS);
 }
 
-static int isspecial (int c)
+static int iswspecial (wint_t wc)
 {
-	return c && strchr(SPECIAL_CHARS, c);
+	return wcschr(SPECIAL_CHARS, wc) ? 1 : 0;
 }
 
-static void print_char (char c, size_t count, char *eol)
+static int isutf8 (wint_t wc)
+{
+	return wcschr(UTF8_CHARS, wc) ? 1 : 0;
+}
+
+static void wperror (wchar_t *msg)
+{
+	fwprintf(stderr, L"%ls: %s\n", msg, strerror(errno));
+}
+
+static void print_char (wchar_t c, size_t count, wchar_t *eol)
 {
 	size_t i;
 
 	for (i = 0; i < count; i++)
-		putchar(c);
+		putwchar(c);
 
-	puts(eol);
+	wprintf(L"%ls\n", eol);
 }
 
 static int random_num (unsigned char rand_max)
@@ -91,7 +105,7 @@ static int random_num (unsigned char rand_max)
 	do {
 		ret = read(urandom_fd, &rand, sizeof(rand));
 		if (ret != sizeof(rand)) {
-			perror("read failed");
+			wperror(L"read failed");
 			close(urandom_fd);
 			exit(EXIT_FAILURE);
 		}
@@ -101,20 +115,39 @@ static int random_num (unsigned char rand_max)
 	return (rand % rand_max);
 }
 
-static double compute_entropy (const unsigned char *data, size_t datasz)
+static double compute_entropy (struct config *conf, const wchar_t *data, size_t datasz)
 {
 	size_t i;
 	double proba, entropy = 0.0;
-	unsigned char freqs[UCHAR_MAX + 1];
+	wchar_t *ptr, *utf8, freqs[UCHAR_MAX + 1];
 
-	memset(freqs, 0, sizeof(freqs));
+	wmemset(freqs, L'\0', sizeof(freqs) / sizeof(wchar_t));
 
-	for (i = 0; i < datasz; i++)
-		freqs[data[i]]++;
+	if (conf->policy.min_utf8) {
+		utf8 = wcschr(conf->alphabet, *UTF8_CHARS);
+		if (!utf8) {
+			fwprintf(stderr, L"FATAL: something went wrong!\n");
+			close(urandom_fd);
+			exit(EXIT_FAILURE);
+		}
+	}
 
-	for (i = 0; i < sizeof(freqs); i++) {
+	for (i = 0; i < datasz; i++) {
+
+		if (data[i] < 127)
+			freqs[data[i]]++;
+		else if (conf->policy.min_utf8) {
+			ptr = wcschr(utf8, data[i]);
+			if (ptr)
+				freqs[ptr - conf->alphabet]++;
+			else
+				wprintf(L"WTFFFFF!!!\n");
+		}
+	}
+
+	for (i = 0; i < sizeof(freqs) / sizeof(wchar_t); i++) {
 		if (freqs[i]) {
-			proba = (double)freqs[i] / sizeof(freqs);
+			proba = (double)freqs[i] / conf->alphabet_size;
 			entropy -= proba * log2(proba);
 		}
 	}
@@ -126,40 +159,42 @@ static double compute_best_entropy (struct config *conf, size_t pwdlen)
 {
 	size_t i;
 	double entropy;
-	unsigned char *pwd;
+	wchar_t *pwd;
 
-	pwd = malloc(pwdlen + 1);
+	pwd = malloc((pwdlen + 1) * sizeof(wint_t));
 	if (!pwd) {
-		perror("malloc failed");
+		wperror(L"malloc failed");
 		exit(EXIT_FAILURE);
 	}
 
 	for (i = 0; i < pwdlen; i++)
 		pwd[i] = conf->alphabet[i % conf->alphabet_size];
 
-	pwd[pwdlen] = 0;
-	entropy = compute_entropy(pwd, pwdlen);
+	pwd[pwdlen] = L'\0';
+	entropy = compute_entropy(conf, pwd, pwdlen);
 	free(pwd);
 	return entropy;
 }
 
-static int policy_ok (struct pwd_policy *policy, unsigned char *pwd, size_t pwdlen)
+static int check_policy (struct pwd_policy *policy, wchar_t *pwd, size_t pwdlen)
 {
 	size_t i;
-	int digit = 0, alpha = 0, ALPHA = 0, special = 0;
+	int digit = 0, alpha = 0, ALPHA = 0, special = 0, utf8 = 0;
 
 	for (i = 0; i < pwdlen; i++) {
 
-		if (isdigit(pwd[i]))
+		if (isutf8(pwd[i]))
+			utf8++;
+		else if (iswdigit(pwd[i]))
 			digit++;
-		else if (islower(pwd[i]))
+		else if (iswlower(pwd[i]))
 			alpha++;
-		else if (isupper(pwd[i]))
+		else if (iswupper(pwd[i]))
 			ALPHA++;
-		else if (isspecial(pwd[i]))
+		else if (iswspecial(pwd[i]))
 			special++;
 		else {
-			fprintf(stderr, "Should never happen!\n");
+			fwprintf(stderr, L"Should never happen!: %lc\n", pwd[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -167,7 +202,8 @@ static int policy_ok (struct pwd_policy *policy, unsigned char *pwd, size_t pwdl
 	return (digit >= policy->min_digit
 			&& alpha   >= policy->min_alpha
 			&& ALPHA   >= policy->min_ALPHA
-			&& special >= policy->min_special);
+			&& special >= policy->min_special
+			&& utf8    >= policy->min_utf8);
 }
 
 /*
@@ -193,24 +229,22 @@ static int find_repetition (struct config *conf, unsigned char *pwd, size_t pwdl
 }
 */
 
-static unsigned char *gen_passwd (struct config *conf, unsigned char *pwd, size_t pwdsz)
+static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 {
-	//int found;
 	size_t i;
-	size_t pwdlen = conf->policy.pwdlen;
 
 	if (!pwd || !pwdsz)
 		return NULL;
 
-	for (i = 0; i < pwdsz; i++)
+	for (i = 0; i < pwdsz - 1; i++)
 		pwd[i] = conf->alphabet[random_num(conf->alphabet_size)];
 
-	pwd[pwdsz - 1] = 0;
+	pwd[pwdsz - 1] = L'\0';
 
-	//while ((found = find_repetition(conf, pwd, pwdlen)))
+	//while (find_repetition(conf, pwd, pwdsz - 1))
 	//	;
 
-	if (opt_check_policy && !policy_ok(&conf->policy, pwd, pwdlen))
+	if (opt_check_policy && !check_policy(&conf->policy, pwd, pwdsz - 1))
 		return NULL;
 
 	return pwd;
@@ -218,59 +252,153 @@ static unsigned char *gen_passwd (struct config *conf, unsigned char *pwd, size_
 
 static int build_alphabet (struct config *conf)
 {
-	unsigned char *ptr;
+	wchar_t *ptr;
 
-	conf->alphabet = ptr = malloc(512);
+	conf->alphabet = ptr = malloc(1024 * sizeof(wchar_t));
 	if (!conf->alphabet) {
-		perror("malloc failed");
+		wperror(L"malloc failed");
 		return -1;
 	}
 
 	if (conf->policy.min_digit) {
 		conf->alphabet_size += DIGIT_CHARS_LEN;
-		memcpy(ptr, DIGIT_CHARS, DIGIT_CHARS_LEN);
+		wmemcpy(ptr, DIGIT_CHARS, DIGIT_CHARS_LEN);
 		ptr += DIGIT_CHARS_LEN;
 	}
 
 	if (conf->policy.min_alpha) {
 		conf->alphabet_size += LOWER_CHARS_LEN;
-		memcpy(ptr, LOWER_CHARS, LOWER_CHARS_LEN);
+		wmemcpy(ptr, LOWER_CHARS, LOWER_CHARS_LEN);
 		ptr += LOWER_CHARS_LEN;
 	}
 
 	if (conf->policy.min_ALPHA) {
 		conf->alphabet_size += UPPER_CHARS_LEN;
-		memcpy(ptr, UPPER_CHARS, UPPER_CHARS_LEN);
+		wmemcpy(ptr, UPPER_CHARS, UPPER_CHARS_LEN);
 		ptr += UPPER_CHARS_LEN;
 	}
 
 	if (conf->policy.min_special) {
 		conf->alphabet_size += SPECIAL_CHARS_LEN;
-		memcpy(ptr, SPECIAL_CHARS, SPECIAL_CHARS_LEN);
+		wmemcpy(ptr, SPECIAL_CHARS, SPECIAL_CHARS_LEN);
 		ptr += SPECIAL_CHARS_LEN;
 	}
 
-	*ptr = 0;
+	if (conf->policy.min_utf8) {
+		conf->alphabet_size += UTF8_CHARS_LEN;
+		wmemcpy(ptr, UTF8_CHARS, UTF8_CHARS_LEN);
+		ptr += UTF8_CHARS_LEN;
+	}
+
+	*ptr = L'\0';
 	conf->policy.best_entropy = compute_best_entropy(conf, conf->policy.pwdlen);
 	return 0;
 }
 
-static int count_chars (unsigned char *pwd, size_t pwdlen, int (*ischar) (int c))
+static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
 {
-	size_t i = 0;
-	int count = 0;
+	size_t i;
+
+	stat->entropy = compute_entropy(conf, pwd, pwdlen);
 
 	for (i = 0; i < pwdlen; i++) {
-		if (ischar(pwd[i]))
-			count++;
+	
+		if (isutf8(pwd[i])) {
+			stat->min_utf8++;
+		}
+		else if (iswdigit(pwd[i])) {
+			stat->min_digit++;
+		}
+		else if (iswlower(pwd[i])) {
+			stat->min_alpha++;
+		}
+		else if (iswupper(pwd[i])) {
+			stat->min_ALPHA++;
+		}
+		else if (iswspecial(pwd[i])) {
+			stat->min_special++;
+		}
+	}
+}
+
+static void print_passwd (wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
+{
+	int padding;
+
+	if (!opt_table) {
+		wprintf(L"%ls\n", pwd);
+	}
+	else {
+		wprintf(L"| %lf | d:%02d a:%02d A:%02d s:%02d u:%02d | %ls",
+				stat->entropy,
+				stat->min_digit,
+				stat->min_alpha,
+				stat->min_ALPHA,
+				stat->min_special,
+				stat->min_utf8,
+				pwd);
+
+		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
+		print_char(' ', padding, L"|");
+	}
+}
+
+static void check_entropy (struct config *conf)
+{
+	size_t pwdlen;
+	wchar_t *ptr, pwd[BUFSIZ];
+	struct pwd_policy stat;
+
+	while (fgetws(pwd, sizeof(pwd), stdin)) {
+
+		ptr = wcschr(pwd, L'\n');
+		if (ptr)
+			*ptr = L'\0';
+
+		pwdlen = wcslen(pwd);
+
+		memset(&stat, 0, sizeof(stat));
+		get_pwd_stats(conf, pwd, pwdlen, &stat);
+		print_passwd(pwd, pwdlen, &stat);
+		wmemset(pwd, L'\0', pwdlen);
+	}
+}
+
+static void generate_passwords (struct config *conf)
+{
+	int i;
+	size_t pwdlen;
+	wchar_t *pwd;
+	struct pwd_policy stat;
+
+	pwdlen = conf->policy.pwdlen;
+	pwd = malloc((pwdlen + 1) * sizeof(wchar_t));
+	if (!pwd) {
+		wperror(L"malloc failed");
+		return;
 	}
 
-	return count;
+	for (i = 0; i < opt_passwd_count;) {
+
+		if (gen_passwd(conf, pwd, pwdlen + 1)) {
+
+			memset(&stat, 0, sizeof(stat));
+			get_pwd_stats(conf, pwd, pwdlen, &stat);
+			if (opt_min_entropy && stat.entropy < conf->policy.min_entropy)
+				continue;
+
+			print_passwd(pwd, pwdlen, &stat);
+			wmemset(pwd, L'\0', pwdlen);
+			i++;
+		}
+	}
+
+	free(pwd);
 }
 
 static struct config *parse_opts (int argc, char **argv, struct config *conf)
 {
-	int i;
+	int i, policy = 0;
 
 	for (i = 1; i < argc; i++) {
 
@@ -279,18 +407,26 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 		}
 		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--digit")) {
 			conf->policy.min_digit = strtoul(argv[i + 1], NULL, 10);
+			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-a") || !strcmp(argv[i], "--alpha")) {
 			conf->policy.min_alpha = strtoul(argv[i + 1], NULL, 10);
+			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-A") || !strcmp(argv[i], "--ALPHA")) {
 			conf->policy.min_ALPHA = strtoul(argv[i + 1], NULL, 10);
+			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--special")) {
 			conf->policy.min_special = strtoul(argv[i + 1], NULL, 10);
+			policy++;
+			i++;
+		}
+		else if (!strcmp(argv[i], "-u") || !strcmp(argv[i], "--utf8")) {
+			conf->policy.min_utf8 = strtoul(argv[i + 1], NULL, 10);
 			i++;
 		}
 		else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--length")) {
@@ -319,7 +455,7 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 			opt_verbose = 1;
 		}
 		else {
-			fprintf(stderr, "FATAL: Invalid option: `%s'\n", argv[i]);
+			fwprintf(stderr, L"FATAL: Invalid option: `%s'\n", argv[i]);
 			usage(argv[0]);
 		}
 	}
@@ -327,7 +463,8 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 	if (!conf->policy.pwdlen)
 		conf->policy.pwdlen = DEFAULT_PASSWD_LEN;
 
-	if (!conf->policy.min_digit
+	if (!policy
+			&& !conf->policy.min_digit
 			&& !conf->policy.min_alpha
 			&& !conf->policy.min_ALPHA
 			&& !conf->policy.min_special)
@@ -344,112 +481,29 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 	return conf;
 }
 
-static void get_pwd_stats (unsigned char *pwd, size_t pwdlen, struct pwd_policy *policy)
-{
-	policy->entropy     = compute_entropy(pwd, pwdlen);
-	policy->min_digit   = count_chars(pwd, pwdlen, isdigit);
-	policy->min_alpha   = count_chars(pwd, pwdlen, islower);
-	policy->min_ALPHA   = count_chars(pwd, pwdlen, isupper);
-	policy->min_special = count_chars(pwd, pwdlen, isspecial);
-}
-
-static void print_passwd (unsigned char *pwd, size_t pwdlen, struct pwd_policy *stat)
-{
-	int padding;
-
-	if (!opt_table) {
-		printf("%s\n", pwd);
-	}
-	else {
-		printf("| %lf | d:%02d a:%02d A:%02d s:%02d | %s",
-				stat->entropy,
-				stat->min_digit,
-				stat->min_alpha,
-				stat->min_ALPHA,
-				stat->min_special,
-				pwd);
-
-		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
-		print_char(' ', padding, "|");
-	}
-}
-
-static void check_entropy (void)
-{
-	size_t pwdlen;
-	char *ptr, pwd[BUFSIZ];
-	struct pwd_policy stat;
-
-	while (fgets(pwd, sizeof(pwd), stdin)) {
-
-		ptr = strchr(pwd, '\n');
-		if (ptr)
-			*ptr = 0;
-
-		pwdlen = strlen(pwd);
-
-		memset(&stat, 0, sizeof(stat));
-		get_pwd_stats((unsigned char *)pwd, pwdlen, &stat);
-		print_passwd((unsigned char *)pwd, pwdlen, &stat);
-		memset(pwd, 0, pwdlen);
-	}
-}
-
-static void generate_passwords (struct config *conf)
-{
-	int i;
-	size_t pwdlen;
-	unsigned char *pwd;
-	struct pwd_policy stat;
-
-	pwdlen = conf->policy.pwdlen;
-	pwd = malloc(pwdlen + 1);
-	if (!pwd) {
-		perror("malloc failed");
-		return;
-	}
-
-	for (i = 0; i < opt_passwd_count;) {
-
-		if (gen_passwd(conf, pwd, pwdlen + 1)) {
-
-			memset(&stat, 0, sizeof(stat));
-			get_pwd_stats(pwd, pwdlen, &stat);
-			if (opt_min_entropy && stat.entropy < conf->policy.min_entropy)
-				continue;
-
-			print_passwd(pwd, pwdlen, &stat);
-			memset(pwd, 0, pwdlen);
-			i++;
-		}
-	}
-
-	free(pwd);
-}
-
 int main (int argc, char **argv)
 {
-	int pad;
-	size_t pwdlen;
+	size_t pad, pwdlen;
 	struct config conf;
 	double best_entropy;
-	char padspacer[32];
-	char padborder[32];
+	wchar_t padspacer[32];
+	wchar_t padborder[32];
 
 	if (!argc || !argv || !*argv) {
-		fprintf(stderr, "FATAL: Invalid arguments.\n");
+		fwprintf(stderr, L"FATAL: Invalid arguments.\n");
 		exit(EXIT_FAILURE);
 	}
 
+	setlocale(LC_ALL, "");
 	memset(&conf, 0, sizeof(conf));
 	if (!parse_opts(argc, argv, &conf)) {
-		fprintf(stderr, "FATAL: Failed parsing options.\n");
+		fwprintf(stderr, L"FATAL: Failed parsing options.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	urandom_fd = open("/dev/urandom", O_RDONLY);
 	if (urandom_fd < 0) {
-		perror("open failed");
+		wperror(L"open failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -460,33 +514,33 @@ int main (int argc, char **argv)
 		conf.policy.min_entropy = best_entropy;
 
 	if (opt_verbose) {
-		printf("\n");
-		printf("Symbols: %lu\n", conf.alphabet_size);
-		printf("Password length: %lu\n", pwdlen);
-		printf("Best entropy for length: %lf\n", best_entropy);
-		printf("Alphabet: %s\n", conf.alphabet);
+		wprintf(L"\n");
+		wprintf(L"Symbols: %lu\n", conf.alphabet_size);
+		wprintf(L"Password length: %lu\n", pwdlen);
+		wprintf(L"Best entropy for length: %lf\n", best_entropy);
+		wprintf(L"Alphabet: %ls\n", conf.alphabet);
 		if (!opt_table)
-			printf("\n");
+			wprintf(L"\n");
 	}
 
 	pad = (int)log10(best_entropy);
-	memset(padspacer, ' ', pad);
-	memset(padborder, '_', pad);
-	padspacer[pad] = 0;
-	padborder[pad] = 0;
+	wmemset(padspacer, L' ', pad);
+	wmemset(padborder, L'_', pad);
+	padspacer[pad] = L'\0';
+	padborder[pad] = L'\0';
 
 	pad = (pwdlen > 7) ? pwdlen : 8;
 	if (opt_table) {
-		printf(" _________%s__________________________",         padborder); print_char('_', pad, "");
-		printf("|         %s |                     |  ",         padspacer); print_char(' ', pad, "|");
-		printf("|  Entropy%s |       Stats         | Password ", padspacer); print_char(' ', MAX(0, pwdlen - 8, int), "|");
-		printf("|_________%s_|_____________________|__",         padborder); print_char('_', pad, "|");
+		wprintf(L" _________%ls_______________________________",         padborder); print_char(L'_', pad, L"");
+		wprintf(L"|         %ls |                          |  ",         padspacer); print_char(L' ', pad, L"|");
+		wprintf(L"|  Entropy%ls |          Stats           | Password ", padspacer); print_char(L' ', MAX(pad - 8, pwdlen - 8, int), L"|");
+		wprintf(L"|_________%ls_|__________________________|__",         padborder); print_char(L'_', pad, L"|");
 	}
 
-	opt_check_entropy ? check_entropy() : generate_passwords(&conf);
+	opt_check_entropy ? check_entropy(&conf) : generate_passwords(&conf);
 
 	if (opt_table) {
-		printf("|_________%s_|_____________________|__", padborder); print_char('_', pad, "|");
+		wprintf(L"|_________%ls_|__________________________|__", padborder); print_char(L'_', pad, L"|");
 	}
 
 	free(conf.alphabet);
@@ -494,4 +548,3 @@ int main (int argc, char **argv)
 	exit(EXIT_SUCCESS);
 	return 0;
 }
-

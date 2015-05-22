@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <wchar.h>
  
 #define PROG_NAME "passwdgen"
  
@@ -32,27 +33,31 @@
 #define DEFAULT_PASSWD_SIZE (DEFAULT_PASSWD_LEN + 1)
 #define DEFAULT_PASSWD_COUNT 64
 
-#define LENGTH(x) (sizeof(x) - 1)
+#define LENGTH(x) ((sizeof(x) - sizeof(wchar_t)) / sizeof(wchar_t))
 #define MIN(x, y, t) (t)((t)(x) > (t)(y) ? (y) : (x))
 #define MAX(x, y, t) (t)((t)(x) < (t)(y) ? (y) : (x))
  
-#define DIGIT_CHARS "0123456789"
+#define DIGIT_CHARS L"0123456789"
 #define DIGIT_CHARS_LEN LENGTH(DIGIT_CHARS)
  
-#define LOWER_CHARS "abcdefghijklmnopqrstuvwxyz"
+#define LOWER_CHARS L"abcdefghijklmnopqrstuvwxyz"
 #define LOWER_CHARS_LEN LENGTH(LOWER_CHARS)
  
-#define UPPER_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define UPPER_CHARS L"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define UPPER_CHARS_LEN LENGTH(UPPER_CHARS)
  
-#define SPECIAL_CHARS "!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~\""
+#define SPECIAL_CHARS L" !#$%&'()*+,-./:;<=>?@[\\]^_`{|}~\""
 #define SPECIAL_CHARS_LEN LENGTH(SPECIAL_CHARS)
+
+#define UTF8_CHARS L"áàâäÁÀÂÄéèêëÉÈÊËíìîïÍÌÎÏóòôöÓÒÔÖúùûüÚÙÛÜýŷÿÝŶŸçÇ€œŒ"
+#define UTF8_CHARS_LEN LENGTH(UTF8_CHARS)
 
 struct pwd_policy {
 	int min_digit;
 	int min_alpha;
 	int min_ALPHA;
 	int min_special;
+	int min_utf8;
 	double entropy;
 	double min_entropy;
 	double best_entropy;
@@ -61,7 +66,7 @@ struct pwd_policy {
 
 struct config {
 	struct pwd_policy policy;
-	unsigned char *alphabet;
+	wchar_t *alphabet;
 	size_t alphabet_size;
 };
 
