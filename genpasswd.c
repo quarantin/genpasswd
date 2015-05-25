@@ -76,7 +76,7 @@ static int random_num (struct config *conf, unsigned char rand_max)
 static double compute_entropy (struct config *conf, const wchar_t *data, size_t datasz)
 {
 	size_t i;
-	double proba, entropy = 0.0;
+	double entropy = 0.0;
 	wchar_t *ptr, *utf8 = NULL;
 	char freqs[UCHAR_MAX + 1];
 
@@ -105,10 +105,8 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 	}
 
 	for (i = 0; i < sizeof(freqs); i++) {
-		if (freqs[i]) {
-			proba = (double)freqs[i] / conf->policy.pwdlen;
-			entropy -= proba * log2(proba);
-		}
+		if (freqs[i])
+			entropy -= freqs[i] * log2((double)freqs[i] / conf->alphabet_size);
 	}
 
 	return entropy;
@@ -116,23 +114,7 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 static double compute_best_entropy (struct config *conf, size_t pwdlen)
 {
-	size_t i;
-	double entropy;
-	wchar_t *pwd;
-
-	pwd = malloc((pwdlen + 1) * sizeof(wint_t));
-	if (!pwd) {
-		perror("malloc failed");
-		exit(EXIT_FAILURE);
-	}
-
-	for (i = 0; i < pwdlen; i++)
-		pwd[i] = conf->alphabet[i % conf->alphabet_size];
-
-	pwd[pwdlen] = L'\0';
-	entropy = compute_entropy(conf, pwd, pwdlen);
-	free(pwd);
-	return entropy;
+	return pwdlen * log2(conf->alphabet_size);
 }
 
 static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stat)
