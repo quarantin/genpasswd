@@ -52,22 +52,35 @@
 #define UTF8_CHARS L"áàâäÁÀÂÄéèêëÉÈÊËíìîïÍÌÎÏóòôöÓÒÔÖúùûüÚÙÛÜýŷÿÝŶŸçÇ€œŒ"
 #define UTF8_CHARS_LEN LENGTH(UTF8_CHARS)
 
-struct pwd_policy {
-	int min_digit;
-	int min_alpha;
-	int min_ALPHA;
-	int min_special;
-	int min_utf8;
+struct range {
+	int min;
+	int max;
+};
+
+struct pwd_stat {
+	int d;
+	int a;
+	int A;
+	int s;
+	int u;
 	double entropy;
+};
+
+struct pwd_policy {
+	struct range d;
+	struct range a;
+	struct range A;
+	struct range s;
+	struct range u;
 	double min_entropy;
 	double best_entropy;
 	size_t pwdlen;
 };
 
 struct config {
-	struct pwd_policy policy;
 	wchar_t *alphabet;
 	size_t alphabet_size;
+	struct pwd_policy policy;
 };
 
 #endif /* GENPASSWD_H */

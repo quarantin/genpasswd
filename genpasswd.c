@@ -48,11 +48,11 @@ static void usage (char *name)
 	fwprintf(stderr, L"Usage:\n\t%s [options]\n\n"
 			"Where options might be a combination of:\n"
 			"\t-h, --help                  Show this help and exit.\n"
-			"\t-d, --digit <num>           Include at least <num> digits.\n"
-			"\t-a, --alpha <num>           Include at least <num> lower case letters.\n"
-			"\t-A, --ALPHA <num>           Include at least <num> upper case letters.\n"
-			"\t-s, --special <num>         Include at least <num> special characters.\n"
-			"\t-u, --utf8 <num>            Include at least <num> UTF-8 characters.\n"
+			"\t-d, --digit <min>[:<max>]   Include at least <min> digits.\n"
+			"\t-a, --alpha <min>[:<max>]   Include at least <min> lower case letters.\n"
+			"\t-A, --ALPHA <min>[:<max>]   Include at least <min> upper case letters.\n"
+			"\t-s, --special <min>[:<max>] Include at least <min> special characters.\n"
+			"\t-u, --utf8 <min>[:<max>]    Include at least <min> UTF-8 characters.\n"
 			"\t-l, --length <num>          Password length.\n"
 			"\t-m, --min-entropy <double>  Minimum entropy in bits.\n"
 			"\t-c, --count <num>           Number of passwords to generate.\n"
@@ -123,7 +123,7 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 	wmemset(freqs, L'\0', sizeof(freqs) / sizeof(wchar_t));
 
-	if (conf->policy.min_utf8) {
+	if (conf->policy.u.min) {
 		utf8 = wcschr(conf->alphabet, *UTF8_CHARS);
 		if (!utf8) {
 			fwprintf(stderr, L"FATAL: something went wrong!\n");
@@ -136,12 +136,12 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 		if (data[i] < 127)
 			freqs[data[i]]++;
-		else if (conf->policy.min_utf8) {
+		else if (conf->policy.u.min) {
 			ptr = wcschr(utf8, data[i]);
 			if (ptr)
 				freqs[ptr - conf->alphabet]++;
 			else
-				wprintf(L"WTFFFFF!!!\n");
+				wprintf(L"FATAL: this should never happen!\n");
 		}
 	}
 
@@ -176,58 +176,46 @@ static double compute_best_entropy (struct config *conf, size_t pwdlen)
 	return entropy;
 }
 
-static int check_policy (struct pwd_policy *policy, wchar_t *pwd, size_t pwdlen)
+static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stat)
 {
 	size_t i;
-	int digit = 0, alpha = 0, ALPHA = 0, special = 0, utf8 = 0;
+
+	memset(stat, 0, sizeof(*stat));
+
+	stat->entropy = compute_entropy(conf, pwd, pwdlen);
 
 	for (i = 0; i < pwdlen; i++) {
-
-		if (isutf8(pwd[i]))
-			utf8++;
-		else if (iswdigit(pwd[i]))
-			digit++;
-		else if (iswlower(pwd[i]))
-			alpha++;
-		else if (iswupper(pwd[i]))
-			ALPHA++;
-		else if (iswspecial(pwd[i]))
-			special++;
-		else {
-			fwprintf(stderr, L"Should never happen!: %lc\n", pwd[i]);
-			exit(EXIT_FAILURE);
+	
+		if (isutf8(pwd[i])) {
+			stat->u++;
+		}
+		else if (iswdigit(pwd[i])) {
+			stat->d++;
+		}
+		else if (iswlower(pwd[i])) {
+			stat->a++;
+		}
+		else if (iswupper(pwd[i])) {
+			stat->A++;
+		}
+		else if (iswspecial(pwd[i])) {
+			stat->s++;
 		}
 	}
-
-	return (digit >= policy->min_digit
-			&& alpha   >= policy->min_alpha
-			&& ALPHA   >= policy->min_ALPHA
-			&& special >= policy->min_special
-			&& utf8    >= policy->min_utf8);
 }
 
-/*
-static int find_repetition (struct config *conf, unsigned char *pwd, size_t pwdlen)
+static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen)
 {
-	int found = 0;
-	size_t i, j, size, limit;
+	struct pwd_stat stat;
+	struct pwd_policy policy = conf->policy;
 
-	for (size = 0; size < pwdlen; size += conf->alphabet_size) {
-
-		limit = MIN(pwdlen - size, conf->alphabet_size, unsigned int);
-		for (i = size; i < size + limit; i++) {
-			for (j = i + 1; j < size + limit; j++) {
-				if (pwd[i] == pwd[j]) {
-					pwd[j] = conf->alphabet[random_num(conf->alphabet_size)];
-					found = 1;
-				}
-			}
-		}
-	}
-
-	return found;
+	get_pwd_stats(conf, pwd, pwdlen, &stat);
+	return ((policy.d.min <= stat.d && stat.d <= policy.d.max) &&
+		(policy.a.min <= stat.a && stat.a <= policy.a.max) &&
+		(policy.A.min <= stat.A && stat.A <= policy.A.max) &&
+		(policy.s.min <= stat.s && stat.s <= policy.s.max) &&
+		(policy.u.min <= stat.u && stat.u <= policy.u.max));
 }
-*/
 
 static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 {
@@ -241,10 +229,7 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 
 	pwd[pwdsz - 1] = L'\0';
 
-	//while (find_repetition(conf, pwd, pwdsz - 1))
-	//	;
-
-	if (opt_check_policy && !check_policy(&conf->policy, pwd, pwdsz - 1))
+	if (opt_check_policy && !check_policy(conf, pwd, pwdsz - 1))
 		return NULL;
 
 	return pwd;
@@ -260,31 +245,31 @@ static int build_alphabet (struct config *conf)
 		return -1;
 	}
 
-	if (conf->policy.min_digit) {
+	if (conf->policy.d.min || conf->policy.d.max) {
 		conf->alphabet_size += DIGIT_CHARS_LEN;
 		wmemcpy(ptr, DIGIT_CHARS, DIGIT_CHARS_LEN);
 		ptr += DIGIT_CHARS_LEN;
 	}
 
-	if (conf->policy.min_alpha) {
+	if (conf->policy.a.min || conf->policy.a.max) {
 		conf->alphabet_size += LOWER_CHARS_LEN;
 		wmemcpy(ptr, LOWER_CHARS, LOWER_CHARS_LEN);
 		ptr += LOWER_CHARS_LEN;
 	}
 
-	if (conf->policy.min_ALPHA) {
+	if (conf->policy.A.min || conf->policy.A.max) {
 		conf->alphabet_size += UPPER_CHARS_LEN;
 		wmemcpy(ptr, UPPER_CHARS, UPPER_CHARS_LEN);
 		ptr += UPPER_CHARS_LEN;
 	}
 
-	if (conf->policy.min_special) {
+	if (conf->policy.s.min || conf->policy.s.max) {
 		conf->alphabet_size += SPECIAL_CHARS_LEN;
 		wmemcpy(ptr, SPECIAL_CHARS, SPECIAL_CHARS_LEN);
 		ptr += SPECIAL_CHARS_LEN;
 	}
 
-	if (conf->policy.min_utf8) {
+	if (conf->policy.u.min || conf->policy.u.max) {
 		conf->alphabet_size += UTF8_CHARS_LEN;
 		wmemcpy(ptr, UTF8_CHARS, UTF8_CHARS_LEN);
 		ptr += UTF8_CHARS_LEN;
@@ -295,33 +280,7 @@ static int build_alphabet (struct config *conf)
 	return 0;
 }
 
-static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
-{
-	size_t i;
-
-	stat->entropy = compute_entropy(conf, pwd, pwdlen);
-
-	for (i = 0; i < pwdlen; i++) {
-	
-		if (isutf8(pwd[i])) {
-			stat->min_utf8++;
-		}
-		else if (iswdigit(pwd[i])) {
-			stat->min_digit++;
-		}
-		else if (iswlower(pwd[i])) {
-			stat->min_alpha++;
-		}
-		else if (iswupper(pwd[i])) {
-			stat->min_ALPHA++;
-		}
-		else if (iswspecial(pwd[i])) {
-			stat->min_special++;
-		}
-	}
-}
-
-static void print_passwd (wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
+static void print_passwd (wchar_t *pwd, size_t pwdlen, struct pwd_stat *stat)
 {
 	int padding;
 
@@ -331,11 +290,11 @@ static void print_passwd (wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
 	else {
 		wprintf(L"| %lf | d:%02d a:%02d A:%02d s:%02d u:%02d | %ls",
 				stat->entropy,
-				stat->min_digit,
-				stat->min_alpha,
-				stat->min_ALPHA,
-				stat->min_special,
-				stat->min_utf8,
+				stat->d,
+				stat->a,
+				stat->A,
+				stat->s,
+				stat->u,
 				pwd);
 
 		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
@@ -343,11 +302,24 @@ static void print_passwd (wchar_t *pwd, size_t pwdlen, struct pwd_policy *stat)
 	}
 }
 
+static void print_policy (struct config *conf)
+{
+	struct pwd_policy policy = conf->policy;
+
+	wprintf(L"Policy:\n");
+	wprintf(L"\td: %u:%u\n", policy.d.min, policy.d.max);
+	wprintf(L"\ta: %u:%u\n", policy.a.min, policy.a.max);
+	wprintf(L"\tA: %u:%u\n", policy.A.min, policy.A.max);
+	wprintf(L"\ts: %u:%u\n", policy.s.min, policy.s.max);
+	wprintf(L"\tu: %u:%u\n", policy.u.min, policy.u.max);
+	wprintf(L"\n");
+}
+
 static void check_entropy (struct config *conf)
 {
 	size_t pwdlen;
 	wchar_t *ptr, pwd[BUFSIZ];
-	struct pwd_policy stat;
+	struct pwd_stat stat;
 
 	while (fgetws(pwd, sizeof(pwd), stdin)) {
 
@@ -356,8 +328,6 @@ static void check_entropy (struct config *conf)
 			*ptr = L'\0';
 
 		pwdlen = wcslen(pwd);
-
-		memset(&stat, 0, sizeof(stat));
 		get_pwd_stats(conf, pwd, pwdlen, &stat);
 		print_passwd(pwd, pwdlen, &stat);
 		wmemset(pwd, L'\0', pwdlen);
@@ -369,7 +339,7 @@ static void generate_passwords (struct config *conf)
 	int i;
 	size_t pwdlen;
 	wchar_t *pwd;
-	struct pwd_policy stat;
+	struct pwd_stat stat;
 
 	pwdlen = conf->policy.pwdlen;
 	pwd = malloc((pwdlen + 1) * sizeof(wchar_t));
@@ -382,7 +352,6 @@ static void generate_passwords (struct config *conf)
 
 		if (gen_passwd(conf, pwd, pwdlen + 1)) {
 
-			memset(&stat, 0, sizeof(stat));
 			get_pwd_stats(conf, pwd, pwdlen, &stat);
 			if (opt_min_entropy && stat.entropy < conf->policy.min_entropy)
 				continue;
@@ -396,9 +365,34 @@ static void generate_passwords (struct config *conf)
 	free(pwd);
 }
 
+static int parse_range (int argc, char **argv, int index, struct range *range)
+{
+	char *ptr;
+
+	if (index >= argc) {
+		fwprintf(stderr, L"FATAL: invalid index.\n");
+		return -1;
+	}
+
+	ptr = strchr(argv[index], ':');
+	if (ptr) {
+		range->min = strtoul(argv[index], NULL, 10);
+		range->max = strtoul(ptr + 1,     NULL, 10);
+	}
+	else {
+		range->min = strtoul(argv[index], NULL, 10);
+		range->max = INT_MAX;
+	}
+
+	if (range->min > range->max)
+		return -1;
+
+	return 0;
+}
+
 static struct config *parse_opts (int argc, char **argv, struct config *conf)
 {
-	int i, policy = 0;
+	int i, err = 0, policy = 0;
 
 	for (i = 1; i < argc; i++) {
 
@@ -406,27 +400,27 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 			usage(argv[0]);
 		}
 		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--digit")) {
-			conf->policy.min_digit = strtoul(argv[i + 1], NULL, 10);
+			err = parse_range(argc, argv, i + 1, &conf->policy.d);
 			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-a") || !strcmp(argv[i], "--alpha")) {
-			conf->policy.min_alpha = strtoul(argv[i + 1], NULL, 10);
+			err = parse_range(argc, argv, i + 1, &conf->policy.a);
 			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-A") || !strcmp(argv[i], "--ALPHA")) {
-			conf->policy.min_ALPHA = strtoul(argv[i + 1], NULL, 10);
+			err = parse_range(argc, argv, i + 1, &conf->policy.A);
 			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--special")) {
-			conf->policy.min_special = strtoul(argv[i + 1], NULL, 10);
+			err = parse_range(argc, argv, i + 1, &conf->policy.s);
 			policy++;
 			i++;
 		}
 		else if (!strcmp(argv[i], "-u") || !strcmp(argv[i], "--utf8")) {
-			conf->policy.min_utf8 = strtoul(argv[i + 1], NULL, 10);
+			err = parse_range(argc, argv, i + 1, &conf->policy.u);
 			i++;
 		}
 		else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--length")) {
@@ -455,25 +449,24 @@ static struct config *parse_opts (int argc, char **argv, struct config *conf)
 			opt_verbose = 1;
 		}
 		else {
+			err = 1;
 			fwprintf(stderr, L"FATAL: Invalid option: `%s'\n", argv[i]);
-			usage(argv[0]);
 		}
+
+		if (err)
+			usage(argv[0]);
 	}
 
 	if (!conf->policy.pwdlen)
 		conf->policy.pwdlen = DEFAULT_PASSWD_LEN;
 
-	if (!policy
-			&& !conf->policy.min_digit
-			&& !conf->policy.min_alpha
-			&& !conf->policy.min_ALPHA
-			&& !conf->policy.min_special)
-	{
+	if (!policy) {
+		conf->policy.d.max = conf->policy.a.max = conf->policy.A.max = conf->policy.s.max = INT_MAX;
 		switch (conf->policy.pwdlen) {
-			default: conf->policy.min_digit   = 1;
-			case 3:  conf->policy.min_special = 1;
-			case 2:  conf->policy.min_ALPHA   = 1;
-			case 1:  conf->policy.min_alpha   = 1;
+			default: conf->policy.d.min = 1;
+			case 3:  conf->policy.s.min = 1;
+			case 2:  conf->policy.A.min = 1;
+			case 1:  conf->policy.a.min = 1;
 		}
 	}
 
@@ -519,6 +512,7 @@ int main (int argc, char **argv)
 		wprintf(L"Password length: %lu\n", pwdlen);
 		wprintf(L"Best entropy for length: %lf\n", best_entropy);
 		wprintf(L"Alphabet: %ls\n", conf.alphabet);
+		print_policy(&conf);
 		if (!opt_table)
 			wprintf(L"\n");
 	}
@@ -548,3 +542,4 @@ int main (int argc, char **argv)
 	exit(EXIT_SUCCESS);
 	return 0;
 }
+
