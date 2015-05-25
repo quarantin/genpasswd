@@ -4,7 +4,7 @@ LIBS=-lm
 TARGET=genpasswd
  
 all:
-	$(CC) $(CFLAGS) $(TARGET).c -o $(TARGET) $(LIBS)
+	$(CC) $(CFLAGS) *.c -o $(TARGET) $(LIBS)
 
 clean:
 	rm -f $(TARGET)

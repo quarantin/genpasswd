@@ -31,7 +31,7 @@
  
 #define DEFAULT_PASSWD_LEN 16
 #define DEFAULT_PASSWD_SIZE (DEFAULT_PASSWD_LEN + 1)
-#define DEFAULT_PASSWD_COUNT 64
+#define DEFAULT_PASSWD_COUNT 32
 
 #define LENGTH(x) ((sizeof(x) - sizeof(wchar_t)) / sizeof(wchar_t))
 #define MIN(x, y, t) (t)((t)(x) > (t)(y) ? (y) : (x))
@@ -78,9 +78,16 @@ struct pwd_policy {
 };
 
 struct config {
+	int urandom_fd;
 	wchar_t *alphabet;
 	size_t alphabet_size;
 	struct pwd_policy policy;
+	int opt_check_entropy;
+	int opt_check_policy;
+	int opt_min_entropy;
+	int opt_passwd_count;
+	int opt_table;
+	int opt_verbose;
 };
 
 #endif /* GENPASSWD_H */
