@@ -45,19 +45,14 @@ static int isutf8 (wint_t wc)
 	return wcschr(UTF8_CHARS, wc) ? 1 : 0;
 }
 
-static void wperror (wchar_t *msg)
-{
-	fwprintf(stderr, L"%ls: %s\n", msg, strerror(errno));
-}
-
-static void print_char (wchar_t c, size_t count, wchar_t *eol)
+static void print_char (char c, size_t count, char *eol)
 {
 	size_t i;
 
 	for (i = 0; i < count; i++)
-		putwchar(c);
+		putchar(c);
 
-	wprintf(L"%ls\n", eol);
+	puts(eol);
 }
 
 static int random_num (unsigned char rand_max)
@@ -71,7 +66,7 @@ static int random_num (unsigned char rand_max)
 	do {
 		ret = read(urandom_fd, &rand, sizeof(rand));
 		if (ret != sizeof(rand)) {
-			wperror(L"read failed");
+			perror("read failed");
 			close(urandom_fd);
 			exit(EXIT_FAILURE);
 		}
@@ -85,14 +80,15 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 {
 	size_t i;
 	double proba, entropy = 0.0;
-	wchar_t *ptr, *utf8, freqs[UCHAR_MAX + 1];
+	wchar_t *ptr, *utf8;
+	char freqs[UCHAR_MAX + 1];
 
-	wmemset(freqs, L'\0', sizeof(freqs) / sizeof(wchar_t));
+	memset(freqs, 0, sizeof(freqs));
 
 	if (conf->policy.u.min) {
 		utf8 = wcschr(conf->alphabet, *UTF8_CHARS);
 		if (!utf8) {
-			fwprintf(stderr, L"FATAL: something went wrong!\n");
+			fprintf(stderr, "FATAL: something went wrong!\n");
 			close(urandom_fd);
 			exit(EXIT_FAILURE);
 		}
@@ -107,11 +103,11 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 			if (ptr)
 				freqs[ptr - conf->alphabet]++;
 			else
-				wprintf(L"FATAL: this should never happen!\n");
+				fprintf(stderr, "FATAL: this should never happen!\n");
 		}
 	}
 
-	for (i = 0; i < sizeof(freqs) / sizeof(wchar_t); i++) {
+	for (i = 0; i < sizeof(freqs); i++) {
 		if (freqs[i]) {
 			proba = (double)freqs[i] / conf->alphabet_size;
 			entropy -= proba * log2(proba);
@@ -129,7 +125,7 @@ static double compute_best_entropy (struct config *conf, size_t pwdlen)
 
 	pwd = malloc((pwdlen + 1) * sizeof(wint_t));
 	if (!pwd) {
-		wperror(L"malloc failed");
+		perror("malloc failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -207,7 +203,7 @@ static int build_alphabet (struct config *conf)
 
 	conf->alphabet = ptr = malloc(1024 * sizeof(wchar_t));
 	if (!conf->alphabet) {
-		wperror(L"malloc failed");
+		perror("malloc failed");
 		return -1;
 	}
 
@@ -251,10 +247,10 @@ static void print_passwd (struct config *conf, wchar_t *pwd, size_t pwdlen, stru
 	int padding;
 
 	if (!conf->opt_table) {
-		wprintf(L"%ls\n", pwd);
+		printf("%ls\n", pwd);
 	}
 	else {
-		wprintf(L"| %lf | d:%02d a:%02d A:%02d s:%02d u:%02d | %ls",
+		printf("| %lf | d:%02d a:%02d A:%02d s:%02d u:%02d | %ls",
 				stat->entropy,
 				stat->d,
 				stat->a,
@@ -264,21 +260,23 @@ static void print_passwd (struct config *conf, wchar_t *pwd, size_t pwdlen, stru
 				pwd);
 
 		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
-		print_char(' ', padding, L"|");
+		print_char(' ', padding, "|");
 	}
+
+	wmemset(pwd, L'\0', pwdlen);
 }
 
 static void print_policy (struct config *conf)
 {
 	struct pwd_policy policy = conf->policy;
 
-	wprintf(L"Policy:\n");
-	wprintf(L"\td: %u:%u\n", policy.d.min, policy.d.max);
-	wprintf(L"\ta: %u:%u\n", policy.a.min, policy.a.max);
-	wprintf(L"\tA: %u:%u\n", policy.A.min, policy.A.max);
-	wprintf(L"\ts: %u:%u\n", policy.s.min, policy.s.max);
-	wprintf(L"\tu: %u:%u\n", policy.u.min, policy.u.max);
-	wprintf(L"\n");
+	printf("Policy:\n");
+	printf("\td: %u:%u\n", policy.d.min, policy.d.max);
+	printf("\ta: %u:%u\n", policy.a.min, policy.a.max);
+	printf("\tA: %u:%u\n", policy.A.min, policy.A.max);
+	printf("\ts: %u:%u\n", policy.s.min, policy.s.max);
+	printf("\tu: %u:%u\n", policy.u.min, policy.u.max);
+	printf("\n");
 }
 
 static void check_entropy (struct config *conf)
@@ -296,7 +294,6 @@ static void check_entropy (struct config *conf)
 		pwdlen = wcslen(pwd);
 		get_pwd_stats(conf, pwd, pwdlen, &stat);
 		print_passwd(conf, pwd, pwdlen, &stat);
-		wmemset(pwd, L'\0', pwdlen);
 	}
 }
 
@@ -310,7 +307,7 @@ static void generate_passwords (struct config *conf)
 	pwdlen = conf->policy.pwdlen;
 	pwd = malloc((pwdlen + 1) * sizeof(wchar_t));
 	if (!pwd) {
-		wperror(L"malloc failed");
+		perror("malloc failed");
 		return;
 	}
 
@@ -323,7 +320,6 @@ static void generate_passwords (struct config *conf)
 				continue;
 
 			print_passwd(conf, pwd, pwdlen, &stat);
-			wmemset(pwd, L'\0', pwdlen);
 			i++;
 		}
 	}
@@ -336,30 +332,30 @@ int main (int argc, char **argv)
 	int err;
 	size_t pad, pwdlen;
 	double best_entropy;
-	wchar_t padspacer[32];
-	wchar_t padborder[32];
+	char padspacer[32];
+	char padborder[32];
 
 	if (!argc || !argv || !*argv) {
-		fwprintf(stderr, L"FATAL: Invalid arguments.\n");
+		fprintf(stderr, "FATAL: Invalid arguments.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	setlocale(LC_ALL, "");
 	memset(&conf, 0, sizeof(conf));
 	if (!parse_opts(argc, argv, &conf)) {
-		fwprintf(stderr, L"FATAL: Failed parsing options.\n");
+		fprintf(stderr, "FATAL: Failed parsing options.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	err = build_alphabet(&conf);
 	if (err) {
-		fwprintf(stderr, L"FATAL: Failed building alphabet.\n");
+		fprintf(stderr, "FATAL: Failed building alphabet.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	urandom_fd = conf.urandom_fd = open("/dev/urandom", O_RDONLY);
 	if (urandom_fd < 0) {
-		wperror(L"open failed");
+		perror("open failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -370,34 +366,34 @@ int main (int argc, char **argv)
 		conf.policy.min_entropy = best_entropy;
 
 	if (conf.opt_verbose) {
-		wprintf(L"\n");
-		wprintf(L"Symbols: %lu\n", conf.alphabet_size);
-		wprintf(L"Password length: %lu\n", pwdlen);
-		wprintf(L"Best entropy for length: %lf\n", best_entropy);
-		wprintf(L"Alphabet: %ls\n", conf.alphabet);
+		printf("\n");
+		printf("Symbols: %lu\n", conf.alphabet_size);
+		printf("Password length: %lu\n", pwdlen);
+		printf("Best entropy for length: %lf\n", best_entropy);
+		printf("Alphabet: %ls\n", conf.alphabet);
 		print_policy(&conf);
 		if (!conf.opt_table)
-			wprintf(L"\n");
+			printf("\n");
 	}
 
 	pad = (int)log10(best_entropy);
-	wmemset(padspacer, L' ', pad);
-	wmemset(padborder, L'_', pad);
-	padspacer[pad] = L'\0';
-	padborder[pad] = L'\0';
+	memset(padspacer, ' ', pad);
+	memset(padborder, '_', pad);
+	padspacer[pad] = 0;
+	padborder[pad] = 0;
 
 	pad = (pwdlen > 7) ? pwdlen : 8;
 	if (conf.opt_table) {
-		wprintf(L" _________%ls_______________________________",         padborder); print_char(L'_', pad, L"");
-		wprintf(L"|         %ls |                          |  ",         padspacer); print_char(L' ', pad, L"|");
-		wprintf(L"|  Entropy%ls |          Stats           | Password ", padspacer); print_char(L' ', MAX(pad - 8, pwdlen - 8, int), L"|");
-		wprintf(L"|_________%ls_|__________________________|__",         padborder); print_char(L'_', pad, L"|");
+		printf(" _________%s_______________________________",         padborder); print_char('_', pad, "");
+		printf("|         %s |                          |  ",         padspacer); print_char(' ', pad, "|");
+		printf("|  Entropy%s |          Stats           | Password ", padspacer); print_char(' ', MAX(pad - 8, pwdlen - 8, int), "|");
+		printf("|_________%s_|__________________________|__",         padborder); print_char('_', pad, "|");
 	}
 
 	conf.opt_check_entropy ? check_entropy(&conf) : generate_passwords(&conf);
 
 	if (conf.opt_table) {
-		wprintf(L"|_________%ls_|__________________________|__", padborder); print_char(L'_', pad, L"|");
+		printf("|_________%s_|__________________________|__", padborder); print_char('_', pad, "|");
 	}
 
 	free(conf.alphabet);

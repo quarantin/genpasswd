@@ -43,7 +43,7 @@ static void usage (char *name)
 	if (name && *name)
 		_name = name;
 
-	fwprintf(stderr, L"Usage:\n\t%s [options]\n\n"
+	fprintf(stderr, "Usage:\n\t%s [options]\n\n"
 			"Where options might be a combination of:\n"
 			"\t-h, --help                  Show this help and exit.\n"
 			"\t-d, --digit <min>[:<max>]   Include at least <min> digits.\n"
