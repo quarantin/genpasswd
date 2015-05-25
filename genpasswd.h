@@ -65,12 +65,12 @@ struct range {
 };
 
 struct pwd_stat {
-	size_t d;
-	size_t a;
-	size_t A;
-	size_t s;
-	size_t u;
-	size_t U;
+	size_t d; // ASCII digits;
+	size_t a; // ASCII lower case
+	size_t A; // ASCII upper case
+	size_t s; // ASCII specials
+	size_t u; // UTF-8 lower case
+	size_t U; // UTF-8 upper case
 	double entropy;
 };
 
@@ -89,6 +89,7 @@ struct pwd_policy {
 struct config {
 	int urandom_fd;
 	wchar_t *alphabet;
+	wchar_t *first_utf8;
 	size_t alphabet_size;
 	struct pwd_policy policy;
 	int opt_check_entropy;

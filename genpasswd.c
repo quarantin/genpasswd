@@ -31,10 +31,6 @@
 #include "genpasswd.h"
 #include "opts.h"
 
-int urandom_fd;
-
-struct config conf;
-
 static int iswspecial (wint_t wc)
 {
 	return wcschr(ASCII_SPECIAL_CHARS, wc) ? 1 : 0;
@@ -56,7 +52,7 @@ static int isutf8upper (wint_t wc)
 	return 0;
 }
 
-static int random_num (unsigned char rand_max)
+static int random_num (struct config *conf, unsigned char rand_max)
 {
 	ssize_t ret;
 	size_t limit;
@@ -65,10 +61,10 @@ static int random_num (unsigned char rand_max)
 	limit = UCHAR_MAX - ((UCHAR_MAX + 1) % rand_max);
 
 	do {
-		ret = read(urandom_fd, &rand, sizeof(rand));
+		ret = read(conf->urandom_fd, &rand, sizeof(rand));
 		if (ret != sizeof(rand)) {
 			perror("read failed");
-			close(urandom_fd);
+			close(conf->urandom_fd);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -81,17 +77,16 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 {
 	size_t i;
 	double proba, entropy = 0.0;
-	wchar_t *ptr, *utf8;
+	wchar_t *ptr, *utf8 = NULL;
 	char freqs[UCHAR_MAX + 1];
 
 	memset(freqs, 0, sizeof(freqs));
 
-// FIXME THIS IS WRONG
-	if (conf->policy.u.min) {
-		utf8 = wcschr(conf->alphabet, *UTF8_LOWER_CHARS);
+	if (conf->first_utf8) {
+		utf8 = wcschr(conf->alphabet, *conf->first_utf8);
 		if (!utf8) {
 			fprintf(stderr, "FATAL: something went wrong!\n");
-			close(urandom_fd);
+			close(conf->urandom_fd);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -100,7 +95,7 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 		if (data[i] < 127)
 			freqs[data[i]]++;
-		else if (conf->policy.u.min) {
+		else if (utf8) {
 			ptr = wcschr(utf8, data[i]);
 			if (ptr)
 				freqs[ptr - conf->alphabet]++;
@@ -193,7 +188,7 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 		return NULL;
 
 	for (i = 0; i < pwdsz - 1; i++)
-		pwd[i] = conf->alphabet[random_num(conf->alphabet_size)];
+		pwd[i] = conf->alphabet[random_num(conf, conf->alphabet_size)];
 
 	pwd[pwdsz - 1] = L'\0';
 
@@ -238,12 +233,16 @@ static int build_alphabet (struct config *conf)
 	}
 
 	if (conf->policy.u.min || conf->policy.u.max) {
+		if (!conf->first_utf8)
+			conf->first_utf8 = UTF8_LOWER_CHARS;
 		conf->alphabet_size += UTF8_LOWER_CHARS_LEN;
 		wmemcpy(ptr, UTF8_LOWER_CHARS, UTF8_LOWER_CHARS_LEN);
 		ptr += UTF8_LOWER_CHARS_LEN;
 	}
 
 	if (conf->policy.U.min || conf->policy.U.max) {
+		if (!conf->first_utf8)
+			conf->first_utf8 = UTF8_UPPER_CHARS;
 		conf->alphabet_size += UTF8_UPPER_CHARS_LEN;
 		wmemcpy(ptr, UTF8_UPPER_CHARS, UTF8_UPPER_CHARS_LEN);
 		ptr += UTF8_UPPER_CHARS_LEN;
@@ -351,6 +350,7 @@ int main (int argc, char **argv)
 	int err;
 	int pad, pad2;
 	size_t pwdlen;
+	struct config conf;
 	double best_entropy;
 	char border[BUFSIZ];
 	char spacer[BUFSIZ];
@@ -373,17 +373,17 @@ int main (int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	urandom_fd = conf.urandom_fd = open("/dev/urandom", O_RDONLY);
-	if (urandom_fd < 0) {
+	best_entropy = conf.policy.best_entropy;
+	if (conf.policy.min_entropy == 0.0 || conf.policy.min_entropy == -1.0)
+		conf.policy.min_entropy = best_entropy;
+
+	conf.urandom_fd = open("/dev/urandom", O_RDONLY);
+	if (conf.urandom_fd < 0) {
 		perror("open failed");
 		exit(EXIT_FAILURE);
 	}
 
 	pwdlen = conf.policy.pwdlen;
-
-	best_entropy = conf.policy.best_entropy;
-	if (conf.policy.min_entropy == 0.0)
-		conf.policy.min_entropy = best_entropy;
 
 	if (conf.opt_verbose) {
 		printf("\n");
@@ -404,20 +404,20 @@ int main (int argc, char **argv)
 	memset(spacer, ' ', sizeof(spacer));
 
 	if (conf.opt_table) {
-		printf(" ___________%.*s______________________________________%.*s\n",  pad, border, pad2, border);
-		printf("|           %.*s|                          |          %.*s|\n", pad, spacer, pad2, spacer);
-		printf("|   Entropy %.*s|          Stats           | Password %.*s|\n", pad, spacer, pad2, spacer);
-		printf("|___________%.*s|__________________________|__________%.*s|\n", pad, border, pad2, border);
+		printf(" ___________%.*s___________________________________________%.*s\n",  pad, border, pad2, border);
+		printf("|           %.*s|                               |          %.*s|\n", pad, spacer, pad2, spacer);
+		printf("|   Entropy %.*s|             Stats             | Password %.*s|\n", pad, spacer, pad2, spacer);
+		printf("|___________%.*s|_______________________________|__________%.*s|\n", pad, border, pad2, border);
 	}
 
 	conf.opt_check_entropy ? check_entropy(&conf) : generate_passwords(&conf);
 
 	if (conf.opt_table) {
-		printf("|___________%.*s|__________________________|__________%.*s|\n", pad, border, pad2, border);
+		printf("|___________%.*s|_______________________________|__________%.*s|\n", pad, border, pad2, border);
 	}
 
 	free(conf.alphabet);
-	close(urandom_fd);
+	close(conf.urandom_fd);
 	exit(EXIT_SUCCESS);
 	return 0;
 }

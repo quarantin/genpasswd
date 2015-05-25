@@ -42,7 +42,7 @@ static struct option options[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static void usage (char *name)
+static void usage (struct config *conf, char *name)
 {
 	char *_name = PROG_NAME;
 
@@ -72,7 +72,7 @@ static void usage (char *name)
 			"\n",
 			_name);
 
-	close(conf.urandom_fd);
+	close(conf->urandom_fd);
 	exit(EXIT_SUCCESS);
 }
 
@@ -113,7 +113,7 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 		switch (c) {
 
 			case 'h':
-				usage(argv[0]);
+				usage(conf, argv[0]);
 				break;
 
 			case 'd':
@@ -158,7 +158,10 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 
 			case 'm':
 				conf->opt_min_entropy = 1;
-				conf->policy.min_entropy = strtod(optarg, NULL) - 0.00000001;
+				if (!strcasecmp(optarg, "max"))
+					conf->policy.min_entropy = -1.0;
+				else
+					conf->policy.min_entropy = strtod(optarg, NULL) - 0.00000001;
 				break;
 
 			case 'n':
@@ -186,7 +189,7 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 		}
 
 		if (err)
-			usage(argv[0]);
+			usage(conf, argv[0]);
 	}
 
 	if (!policy_set) {
