@@ -1,5 +1,6 @@
-use stdargs to parse command line options
 custom alphabets on the command line
 possibility to specify a range for length (min/max)
 possibility to specify a range for entropy (min/max)
 update README (not up-to-date anymore)
+add parameter for min/max number of repetition for a char
+add parameter for min/max number of repetition globally (per password)
