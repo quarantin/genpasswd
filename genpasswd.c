@@ -37,22 +37,23 @@ struct config conf;
 
 static int iswspecial (wint_t wc)
 {
-	return wcschr(SPECIAL_CHARS, wc) ? 1 : 0;
+	return wcschr(ASCII_SPECIAL_CHARS, wc) ? 1 : 0;
 }
 
-static int isutf8 (wint_t wc)
+static int isutf8lower (wint_t wc)
 {
-	return wcschr(UTF8_CHARS, wc) ? 1 : 0;
+	if (iswlower(wc))
+		return wcschr(UTF8_LOWER_CHARS, wc) ? 1 : 0;
+
+	return 0;
 }
 
-static void print_char (char c, size_t count, char *eol)
+static int isutf8upper (wint_t wc)
 {
-	size_t i;
+	if (iswupper(wc))
+		return wcschr(UTF8_UPPER_CHARS, wc) ? 1 : 0;
 
-	for (i = 0; i < count; i++)
-		putchar(c);
-
-	puts(eol);
+	return 0;
 }
 
 static int random_num (unsigned char rand_max)
@@ -85,8 +86,9 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 	memset(freqs, 0, sizeof(freqs));
 
+// FIXME THIS IS WRONG
 	if (conf->policy.u.min) {
-		utf8 = wcschr(conf->alphabet, *UTF8_CHARS);
+		utf8 = wcschr(conf->alphabet, *UTF8_LOWER_CHARS);
 		if (!utf8) {
 			fprintf(stderr, "FATAL: something went wrong!\n");
 			close(urandom_fd);
@@ -109,12 +111,12 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 
 	for (i = 0; i < sizeof(freqs); i++) {
 		if (freqs[i]) {
-			proba = (double)freqs[i] / conf->alphabet_size;
+			proba = (double)freqs[i] / conf->policy.pwdlen;
 			entropy -= proba * log2(proba);
 		}
 	}
 
-	return entropy * 100;
+	return entropy;
 }
 
 static double compute_best_entropy (struct config *conf, size_t pwdlen)
@@ -148,8 +150,11 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 
 	for (i = 0; i < pwdlen; i++) {
 	
-		if (isutf8(pwd[i])) {
+		if (isutf8lower(pwd[i])) {
 			stat->u++;
+		}
+		else if (isutf8upper(pwd[i])) {
+			stat->U++;
 		}
 		else if (iswdigit(pwd[i])) {
 			stat->d++;
@@ -176,7 +181,8 @@ static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen)
 		(policy.a.min <= stat.a && stat.a <= policy.a.max) &&
 		(policy.A.min <= stat.A && stat.A <= policy.A.max) &&
 		(policy.s.min <= stat.s && stat.s <= policy.s.max) &&
-		(policy.u.min <= stat.u && stat.u <= policy.u.max));
+		(policy.u.min <= stat.u && stat.u <= policy.u.max) &&
+		(policy.U.min <= stat.U && stat.U <= policy.U.max));
 }
 
 static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
@@ -208,33 +214,39 @@ static int build_alphabet (struct config *conf)
 	}
 
 	if (conf->policy.d.min || conf->policy.d.max) {
-		conf->alphabet_size += DIGIT_CHARS_LEN;
-		wmemcpy(ptr, DIGIT_CHARS, DIGIT_CHARS_LEN);
-		ptr += DIGIT_CHARS_LEN;
+		conf->alphabet_size += ASCII_DIGIT_CHARS_LEN;
+		wmemcpy(ptr, ASCII_DIGIT_CHARS, ASCII_DIGIT_CHARS_LEN);
+		ptr += ASCII_DIGIT_CHARS_LEN;
 	}
 
 	if (conf->policy.a.min || conf->policy.a.max) {
-		conf->alphabet_size += LOWER_CHARS_LEN;
-		wmemcpy(ptr, LOWER_CHARS, LOWER_CHARS_LEN);
-		ptr += LOWER_CHARS_LEN;
+		conf->alphabet_size += ASCII_LOWER_CHARS_LEN;
+		wmemcpy(ptr, ASCII_LOWER_CHARS, ASCII_LOWER_CHARS_LEN);
+		ptr += ASCII_LOWER_CHARS_LEN;
 	}
 
 	if (conf->policy.A.min || conf->policy.A.max) {
-		conf->alphabet_size += UPPER_CHARS_LEN;
-		wmemcpy(ptr, UPPER_CHARS, UPPER_CHARS_LEN);
-		ptr += UPPER_CHARS_LEN;
+		conf->alphabet_size += ASCII_UPPER_CHARS_LEN;
+		wmemcpy(ptr, ASCII_UPPER_CHARS, ASCII_UPPER_CHARS_LEN);
+		ptr += ASCII_UPPER_CHARS_LEN;
 	}
 
 	if (conf->policy.s.min || conf->policy.s.max) {
-		conf->alphabet_size += SPECIAL_CHARS_LEN;
-		wmemcpy(ptr, SPECIAL_CHARS, SPECIAL_CHARS_LEN);
-		ptr += SPECIAL_CHARS_LEN;
+		conf->alphabet_size += ASCII_SPECIAL_CHARS_LEN;
+		wmemcpy(ptr, ASCII_SPECIAL_CHARS, ASCII_SPECIAL_CHARS_LEN);
+		ptr += ASCII_SPECIAL_CHARS_LEN;
 	}
 
 	if (conf->policy.u.min || conf->policy.u.max) {
-		conf->alphabet_size += UTF8_CHARS_LEN;
-		wmemcpy(ptr, UTF8_CHARS, UTF8_CHARS_LEN);
-		ptr += UTF8_CHARS_LEN;
+		conf->alphabet_size += UTF8_LOWER_CHARS_LEN;
+		wmemcpy(ptr, UTF8_LOWER_CHARS, UTF8_LOWER_CHARS_LEN);
+		ptr += UTF8_LOWER_CHARS_LEN;
+	}
+
+	if (conf->policy.U.min || conf->policy.U.max) {
+		conf->alphabet_size += UTF8_UPPER_CHARS_LEN;
+		wmemcpy(ptr, UTF8_UPPER_CHARS, UTF8_UPPER_CHARS_LEN);
+		ptr += UTF8_UPPER_CHARS_LEN;
 	}
 
 	*ptr = L'\0';
@@ -244,23 +256,30 @@ static int build_alphabet (struct config *conf)
 
 static void print_passwd (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stat)
 {
-	int padding;
+	int width, width2;
+	char *lborder = "", *mborder = "\t", *rborder = "", spacer[BUFSIZ];
 
-	if (!conf->opt_table) {
+	if (!conf->opt_show_stats) {
 		printf("%ls\n", pwd);
 	}
 	else {
-		printf("| %lf | d:%02lu a:%02lu A:%02lu s:%02lu u:%02lu | %ls",
-				stat->entropy,
-				stat->d,
-				stat->a,
-				stat->A,
-				stat->s,
-				stat->u,
-				pwd);
+		if (conf->opt_table) {
+			lborder = "| "; mborder = " | "; rborder = " |";
+		}
 
-		padding = (pwdlen > 7) ? 1 : 9 - pwdlen;
-		print_char(' ', padding, "|");
+		width = 10 + log10(conf->policy.best_entropy);
+		width2 = (pwdlen > 7 ? 0 : 8 - pwdlen);
+		memset(spacer, ' ', sizeof(spacer));
+
+		printf("%s%*.8lf%sd:%02lu a:%02lu A:%02lu s:%02lu u:%02lu U:%02lu%s%ls%.*s%s\n",
+			lborder,
+			width, stat->entropy,
+			mborder,
+			stat->d, stat->a, stat->A, stat->s, stat->u, stat->U,
+			mborder,
+			pwd,
+			width2, spacer,
+			rborder);
 	}
 
 	wmemset(pwd, L'\0', pwdlen);
@@ -270,12 +289,13 @@ static void print_policy (struct config *conf)
 {
 	struct pwd_policy p = conf->policy;
 
-	printf("Policy: d:%lu:%lu a:%lu:%lu A:%lu:%lu s:%lu:%lu u:%lu:%lu\n",
+	printf("Policy: d:%lu:%lu a:%lu:%lu A:%lu:%lu s:%lu:%lu u:%lu:%lu U:%lu:%lu\n",
 			p.d.min, p.d.max,
 			p.a.min, p.a.max,
 			p.A.min, p.A.max,
 			p.s.min, p.s.max,
-			p.u.min, p.u.max);
+			p.u.min, p.u.max,
+			p.U.min, p.U.max);
 }
 
 static void check_entropy (struct config *conf)
@@ -329,10 +349,11 @@ static void generate_passwords (struct config *conf)
 int main (int argc, char **argv)
 {
 	int err;
-	size_t pad, pwdlen;
+	int pad, pad2;
+	size_t pwdlen;
 	double best_entropy;
-	char padspacer[32];
-	char padborder[32];
+	char border[BUFSIZ];
+	char spacer[BUFSIZ];
 
 	if (!argc || !argv || !*argv) {
 		fprintf(stderr, "FATAL: Invalid arguments.\n");
@@ -368,31 +389,31 @@ int main (int argc, char **argv)
 		printf("\n");
 		printf("Symbols: %lu\n", conf.alphabet_size);
 		printf("Password length: %lu\n", pwdlen);
-		printf("Best entropy for length: %lf\n", best_entropy);
-		printf("Alphabet: %ls\n", conf.alphabet);
+		printf("Best entropy for length: %.8lf\n", best_entropy);
 		print_policy(&conf);
+		printf("Alphabet: %ls\n", conf.alphabet);
 		if (!conf.opt_table)
 			printf("\n");
 	}
 
-	pad = (int)log10(best_entropy);
-	memset(padspacer, ' ', pad);
-	memset(padborder, '_', pad);
-	padspacer[pad] = 0;
-	padborder[pad] = 0;
+	pad = 1 + log10(best_entropy);
+	pad2 = (pwdlen > 7) ? pwdlen : 8;
+	pad2 = MAX(pad2 - 8, pwdlen - 8, int);
 
-	pad = (pwdlen > 7) ? pwdlen : 8;
+	memset(border, '_', sizeof(border));
+	memset(spacer, ' ', sizeof(spacer));
+
 	if (conf.opt_table) {
-		printf(" _________%s_______________________________",         padborder); print_char('_', pad, "");
-		printf("|         %s |                          |  ",         padspacer); print_char(' ', pad, "|");
-		printf("|  Entropy%s |          Stats           | Password ", padspacer); print_char(' ', MAX(pad - 8, pwdlen - 8, int), "|");
-		printf("|_________%s_|__________________________|__",         padborder); print_char('_', pad, "|");
+		printf(" ___________%.*s______________________________________%.*s\n",  pad, border, pad2, border);
+		printf("|           %.*s|                          |          %.*s|\n", pad, spacer, pad2, spacer);
+		printf("|   Entropy %.*s|          Stats           | Password %.*s|\n", pad, spacer, pad2, spacer);
+		printf("|___________%.*s|__________________________|__________%.*s|\n", pad, border, pad2, border);
 	}
 
 	conf.opt_check_entropy ? check_entropy(&conf) : generate_passwords(&conf);
 
 	if (conf.opt_table) {
-		printf("|_________%s_|__________________________|__", padborder); print_char('_', pad, "|");
+		printf("|___________%.*s|__________________________|__________%.*s|\n", pad, border, pad2, border);
 	}
 
 	free(conf.alphabet);

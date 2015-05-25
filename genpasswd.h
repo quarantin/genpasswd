@@ -33,24 +33,31 @@
 #define DEFAULT_PASSWD_SIZE (DEFAULT_PASSWD_LEN + 1)
 #define DEFAULT_PASSWD_COUNT 32
 
-#define LENGTH(x) ((sizeof(x) - sizeof(wchar_t)) / sizeof(wchar_t))
-#define MIN(x, y, t) (t)((t)(x) > (t)(y) ? (y) : (x))
-#define MAX(x, y, t) (t)((t)(x) < (t)(y) ? (y) : (x))
- 
-#define DIGIT_CHARS L"0123456789"
-#define DIGIT_CHARS_LEN LENGTH(DIGIT_CHARS)
- 
-#define LOWER_CHARS L"abcdefghijklmnopqrstuvwxyz"
-#define LOWER_CHARS_LEN LENGTH(LOWER_CHARS)
- 
-#define UPPER_CHARS L"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-#define UPPER_CHARS_LEN LENGTH(UPPER_CHARS)
- 
-#define SPECIAL_CHARS L" !#$%&'()*+,-./:;<=>?@[\\]^_`{|}~\""
-#define SPECIAL_CHARS_LEN LENGTH(SPECIAL_CHARS)
+#define MIN(x, y, t) ((t)(x) > (t)(y) ? (t)(y) : (t)(x))
+#define MAX(x, y, t) ((t)(x) < (t)(y) ? (t)(y) : (t)(x))
 
-#define UTF8_CHARS L"áàâäÁÀÂÄéèêëÉÈÊËíìîïÍÌÎÏóòôöÓÒÔÖúùûüÚÙÛÜýŷÿÝŶŸçÇ€œŒ"
-#define UTF8_CHARS_LEN LENGTH(UTF8_CHARS)
+#define LENGTH(x) ((sizeof(x) - sizeof(wchar_t)) / sizeof(wchar_t))
+ 
+#define ASCII_DIGIT_CHARS L"0123456789"
+#define ASCII_DIGIT_CHARS_LEN LENGTH(ASCII_DIGIT_CHARS)
+ 
+#define ASCII_LOWER_CHARS L"abcdefghijklmnopqrstuvwxyz"
+#define ASCII_LOWER_CHARS_LEN LENGTH(ASCII_LOWER_CHARS)
+ 
+#define ASCII_UPPER_CHARS L"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define ASCII_UPPER_CHARS_LEN LENGTH(ASCII_UPPER_CHARS)
+ 
+#define ASCII_SPECIAL_CHARS L" !#$%&'()*+,-./:;<=>?@[\\]^_`{|}~\""
+#define ASCII_SPECIAL_CHARS_LEN LENGTH(ASCII_SPECIAL_CHARS)
+
+#define UTF8_LOWER_CHARS L"àáâãäåæçðèéêëœìíîïñòóôõöøŧþùúûüýŷÿ"
+#define UTF8_LOWER_CHARS_LEN LENGTH(UTF8_LOWER_CHARS)
+
+#define UTF8_UPPER_CHARS L"ÀÁÂÃÄÅÆÇÐÈÉÊËŒÌÍÎÏÑÒÓÔÕÖØŦÞÙÚÛÜÝŶŸ"
+#define UTF8_UPPER_CHARS_LEN LENGTH(UTF8_UPPER_CHARS)
+
+#define UTF8_SPECIAL_CHARS L"×÷ß€" // TODO
+#define UTF8_SPECIAL_CHARS_LEN LENGTH(UTF8_SPECIAL_CHARS)
 
 struct range {
 	size_t min;
@@ -63,6 +70,7 @@ struct pwd_stat {
 	size_t A;
 	size_t s;
 	size_t u;
+	size_t U;
 	double entropy;
 };
 
@@ -72,6 +80,7 @@ struct pwd_policy {
 	struct range A;
 	struct range s;
 	struct range u;
+	struct range U;
 	double min_entropy;
 	double best_entropy;
 	size_t pwdlen;
@@ -84,9 +93,11 @@ struct config {
 	struct pwd_policy policy;
 	int opt_check_entropy;
 	int opt_check_policy;
+	int opt_show_stats;
 	int opt_min_entropy;
 	int opt_passwd_count;
 	int opt_table;
+	int opt_header;
 	int opt_verbose;
 };
 

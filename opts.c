@@ -30,11 +30,13 @@ static struct option options[] = {
 	{ "ALPHA",         required_argument, 0, 'A' },
 	{ "special",       required_argument, 0, 's' },
 	{ "utf8",          required_argument, 0, 'u' },
+	{ "UTF8",          required_argument, 0, 'U' },
+	{ "check-entropy", no_argument,       0, 'C' },
 	{ "count",         required_argument, 0, 'c' },
 	{ "length",        required_argument, 0, 'l' },
 	{ "min-entropy",   required_argument, 0, 'm' },
-	{ "check-entropy", required_argument, 0, 'e' },
 	{ "no-policy",     no_argument,       0, 'n' },
+	{ "show-stats",    no_argument,       0, 'S' },
 	{ "table",         no_argument,       0, 't' },
 	{ "verbose",       no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 },
@@ -54,15 +56,18 @@ static void usage (char *name)
 			"\t-a, --alpha <min>[:<max>]   Include at least <min> lower case letters.\n"
 			"\t-A, --ALPHA <min>[:<max>]   Include at least <min> upper case letters.\n"
 			"\t-s, --special <min>[:<max>] Include at least <min> special characters.\n"
-			"\t-u, --utf8 <min>[:<max>]    Include at least <min> UTF-8 characters.\n"
+			"\t-u, --utf8 <min>[:<max>]    Include at least <min> lower case UTF-8 characters.\n"
+			"\t-U, --UTF8 <min>[:<max>]    Include at least <min> upper case UTF-8 characters.\n"
+			"\t-C, --check-entropy         Don't generate, instead check entropy of\n"
+			"\t                            passwords supplied through stdin.\n"
+			"\t-c, --count <num>           Number of passwords to generate.\n"
 			"\t-l, --length <num>          Password length.\n"
 			"\t-m, --min-entropy <double>  Minimum entropy in bits.\n"
-			"\t-c, --count <num>           Number of passwords to generate.\n"
-			"\t-e, --check-entropy         Don't generate, instead check entropy of\n"
-			"\t                            passwords supplied through stdin.\n"
 			"\t-n, --no-policy             Don't check password policy.\n"
+			"\t-S, --show-stats            Show entropy and statistics for generated\n"
+			"\t                            passwords.\n"
 			"\t-t, --table                 Print passwords in a table with entropy and\n"
-			"\t                            statitistics.\n"
+			"\t                            statitistics (implies -S).\n"
 			"\t-v, --verbose               Verbose mode.\n"
 			"\n",
 			_name);
@@ -71,7 +76,7 @@ static void usage (char *name)
 	exit(EXIT_SUCCESS);
 }
 
-static int parse_range (char *optarg, struct range *range)
+static int parse_range (struct config *conf, char *optarg, struct range *range)
 {
         char *ptr;
 
@@ -82,7 +87,7 @@ static int parse_range (char *optarg, struct range *range)
         }
         else {
                 range->min = strtoul(optarg, NULL, 10);
-                range->max = INT_MAX;
+                range->max = conf->policy.pwdlen;
         }
 
         if (range->min > range->max)
@@ -101,7 +106,7 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 
 	while (1) {
 
-		c = getopt_long(argc, argv, "hd:a:A:s:u:c:l:m:netv", options, NULL);
+		c = getopt_long(argc, argv, "hd:a:A:s:u:U:Cc:el:m:nStv", options, NULL);
 		if (c == -1)
 			break;
 
@@ -112,27 +117,35 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 				break;
 
 			case 'd':
-				err = parse_range(optarg, &conf->policy.d);
+				err = parse_range(conf, optarg, &conf->policy.d);
 				policy_set = 1;
 				break;
 
 			case 'a':
-				err = parse_range(optarg, &conf->policy.a);
+				err = parse_range(conf, optarg, &conf->policy.a);
 				policy_set = 1;
 				break;
 
 			case 'A':
-				err = parse_range(optarg, &conf->policy.A);
+				err = parse_range(conf, optarg, &conf->policy.A);
 				policy_set = 1;
 				break;
 
 			case 's':
-				err = parse_range(optarg, &conf->policy.s);
+				err = parse_range(conf, optarg, &conf->policy.s);
 				policy_set = 1;
 				break;
 
 			case 'u':
-				err = parse_range(optarg, &conf->policy.u);
+				err = parse_range(conf, optarg, &conf->policy.u);
+				break;
+
+			case 'U':
+				err = parse_range(conf, optarg, &conf->policy.U);
+				break;
+
+			case 'C':
+				conf->opt_check_entropy = 1;
 				break;
 
 			case 'c':
@@ -145,18 +158,19 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 
 			case 'm':
 				conf->opt_min_entropy = 1;
-				conf->policy.min_entropy = strtod(optarg, NULL);
+				conf->policy.min_entropy = strtod(optarg, NULL) - 0.00000001;
 				break;
 
 			case 'n':
 				conf->opt_check_policy = 0;
 				break;
 
-			case 'e':
-				conf->opt_check_entropy = 1;
+			case 'S':
+				conf->opt_show_stats = 1;
 				break;
 
 			case 't':
+				conf->opt_show_stats = 1;
 				conf->opt_table = 1;
 				break;
 
