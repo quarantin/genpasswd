@@ -53,16 +53,16 @@
 #define UTF8_CHARS_LEN LENGTH(UTF8_CHARS)
 
 struct range {
-	int min;
-	int max;
+	size_t min;
+	size_t max;
 };
 
 struct pwd_stat {
-	int d;
-	int a;
-	int A;
-	int s;
-	int u;
+	size_t d;
+	size_t a;
+	size_t A;
+	size_t s;
+	size_t u;
 	double entropy;
 };
 

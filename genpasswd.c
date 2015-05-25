@@ -250,7 +250,7 @@ static void print_passwd (struct config *conf, wchar_t *pwd, size_t pwdlen, stru
 		printf("%ls\n", pwd);
 	}
 	else {
-		printf("| %lf | d:%02d a:%02d A:%02d s:%02d u:%02d | %ls",
+		printf("| %lf | d:%02lu a:%02lu A:%02lu s:%02lu u:%02lu | %ls",
 				stat->entropy,
 				stat->d,
 				stat->a,
@@ -268,15 +268,14 @@ static void print_passwd (struct config *conf, wchar_t *pwd, size_t pwdlen, stru
 
 static void print_policy (struct config *conf)
 {
-	struct pwd_policy policy = conf->policy;
+	struct pwd_policy p = conf->policy;
 
-	printf("Policy:\n");
-	printf("\td: %u:%u\n", policy.d.min, policy.d.max);
-	printf("\ta: %u:%u\n", policy.a.min, policy.a.max);
-	printf("\tA: %u:%u\n", policy.A.min, policy.A.max);
-	printf("\ts: %u:%u\n", policy.s.min, policy.s.max);
-	printf("\tu: %u:%u\n", policy.u.min, policy.u.max);
-	printf("\n");
+	printf("Policy: d:%lu:%lu a:%lu:%lu A:%lu:%lu s:%lu:%lu u:%lu:%lu\n",
+			p.d.min, p.d.max,
+			p.a.min, p.a.max,
+			p.A.min, p.A.max,
+			p.s.min, p.s.max,
+			p.u.min, p.u.max);
 }
 
 static void check_entropy (struct config *conf)
