@@ -144,9 +144,10 @@ Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'(
 |______________|_______________________________|__________________|
 
 #
-# Generate passwords with maximum entropy (best possible entropy for charset and length).
-# Note: This only means the passwords will have no repetition, but doesn't guarantee anything
-# about password strength in general.
+# Generate passwords with maximum entropy (best possible entropy for charset
+# and length).
+# Note: This only means the passwords will have no repetition, but doesn't
+# guarantee anything about password strength in general.
 #
 $ genpasswd -c 10 -t -v -e max
 
