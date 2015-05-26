@@ -7,163 +7,219 @@ Usage:
 
 Where options might be a combination of:
 	-h, --help                  Show this help and exit.
-	-d, --digit <num>           Include at least <num> digits.
-	-a, --alpha <num>           Include at least <num> lower case letters.
-	-A, --ALPHA <num>           Include at least <num> upper case letters.
-	-s, --special <num>         Include at least <num> special characters.
-	-l, --length <num>          Password length.
-	-m, --min-entropy <double>  Minimum entropy in bits.
-	-c, --count <num>           Number of passwords to generate.
-	-e, --check-entropy         Don't generate, instead check entropy of
+	-d, --digit <min>[:<max>]   Include at least <min> digits.
+	-a, --alpha <min>[:<max>]   Include at least <min> lower case letters.
+	-A, --ALPHA <min>[:<max>]   Include at least <min> upper case letters.
+	-s, --special <min>[:<max>] Include at least <min> special characters.
+	-u, --utf8 <min>[:<max>]    Include at least <min> lower case UTF-8 characters.
+	-U, --UTF8 <min>[:<max>]    Include at least <min> upper case UTF-8 characters.
+	-C, --check-entropy         Don't generate, instead check entropy of
 	                            passwords supplied through stdin.
+	-c, --count <num>           Number of passwords to generate.
+	-e, --entropy <min>[:<max>] Select passwords with entropy in given range.
+	-l, --length <num>          Password length.
 	-n, --no-policy             Don't check password policy.
+	-S, --show-stats            Show entropy and statistics for generated
+	                            passwords.
 	-t, --table                 Print passwords in a table with entropy and
-	                            statitistics.
+	                            statitistics (implies -S).
 	-v, --verbose               Verbose mode.
 
 #
 # Generating passwords (default length is 16).
 #
 $ genpasswd
-~`|5N@^Y<O*c&UBu
-|3DNs0'SVi*H4@Ap
-Yf9)7ZywXcV,/mq_
-<&/UA7;:=_[+}p,.
-~%S[Fw_BD7{P/"Ru
-Yt+>F,_;0PVN%DS[
-nmUtqwd!1ocj@}$y
-FE&T}v~C<a359r-=
-ye@TX*vgJtbh1w?M
-"UH$L8aw+2:#Cr){
-"LUp@Yg4jr!RNBvI
-...
+K>{D8\"6r~g{:.Ot
+j?7d5/@,zG44nQ4*
+5`W2{OC$5!;@SXgH
+3qNVVj\bn8Bwly_D
+BTXWZ\(L7$ue1h;O
+tFPp-2Zkgl_hoo/-
+t=#]U\#45`NhGy1H
+s<!HFdI/?? sm$N4
+fBxbj_E615Vztc\n
+x4nu#Q`_Eyp3:qe@
+87G`Y'lP'Rn6+! ]
+cfmbmd_BfP/oig6c
+Lz`:+<:`P8DB7[Xn
+\WM=7""x{sJU}gUH
+Tr~bX!FgE*1,TebK
+QCZCyJN/Wpe\k<|2
+&*r(qoTf5f8l3,~H
+)<'q>[>t5iA|+jLz
++$V=R6xGv+CuF'{6
+7M3:wo:qd+4`zZHm
+.| 2x!hpR]1*dBTX
+c%I$6G%$3Qd1GC!4
+++$d1FU|X|(=eg9&
+}xpaA ys8tiaMuR_
+;)>JpZ3@WRzDX?S'
+;X<I6xQzW?B7_C"Q
+y{3QP^bUi"DU3)h=
+ptv!46=[,oGJ{mll
+Iv:2w$4(&[xfpn a
+6F=I@6b:CS MpG?=
+N9M#mP9Q$_obDA{#
+]L#]0-uX88U9#qAT
 
 #
-# Generating 10 passwords, each 16 characters long, in a table with entropy
-# and statistics.
+# Generating 10 passwords, each 12 characters long, in a table with entropy
+# and statistics, using only ASCII characters.
 #
-$ genpasswd -l 16 -c 10 -t -v
+$ genpasswd -c 10 -l 12 -t -v
 
-Symbols: 94
+Symbols: 95
+Password length: 12
+Policy: d:1:12 a:1:12 A:1:12 s:1:12 u:0:0 U:0:0
+Best entropy for charset and length:  78,83826730
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ ____________________________________________________________
+|             |                               |              |
+|   Entropy   |             Stats             | Password     |
+|_____________|_______________________________|______________|
+| 78,83826730 | d:01 a:04 A:05 s:02 u:00 U:00 | PQDByr1#g_pZ |
+| 76,83826730 | d:02 a:01 A:04 s:05 u:00 U:00 | +vZ"4TE\*Z:3 |
+| 78,83826730 | d:03 a:02 A:02 s:05 u:00 U:00 | [e5]$Dn9/S=4 |
+| 78,83826730 | d:01 a:03 A:04 s:04 u:00 U:00 | $nYQ~sT]}Gu0 |
+| 76,83826730 | d:01 a:06 A:04 s:01 u:00 U:00 | 1;oUqSoKLcmk |
+| 78,83826730 | d:01 a:05 A:02 s:04 u:00 U:00 | r$:NpeH~+i5d |
+| 76,83826730 | d:02 a:03 A:02 s:05 u:00 U:00 | mI(<yN}1&1c# |
+| 78,83826730 | d:03 a:02 A:02 s:05 u:00 U:00 | 8%.+r6b5A| Z |
+| 76,83826730 | d:01 a:01 A:06 s:04 u:00 U:00 | SME5W`.Ck*Z. |
+| 74,83826730 | d:01 a:02 A:02 s:07 u:00 U:00 | ^5&~@i,,lJ~D |
+|_____________|_______________________________|______________|
+
+#
+# Generating passwors with at least 3 digits, 3 lower case letters,
+# 3 upper case letters, and 3 special characters.
+#
+$ genpasswd -c 10 -l 16 -t -v -d 3 -a 3 -A 3 -s 3
+
+Symbols: 95
 Password length: 16
-Best entropy for length: 50.000000
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
- ____________________________________________________
-|           |                     |                  |
-|  Entropy  |       Stats         | Password         |
-|___________|_____________________|__________________|
-| 50.000000 | d:01 a:04 A:05 s:06 | }C(%3DpH/R<Lcvk> |
-| 50.000000 | d:02 a:02 A:03 s:09 | `pSn):F*7(Q=?+2^ |
-| 50.000000 | d:01 a:03 A:05 s:07 | Wp?.-+A>%dJO6b&I |
-| 50.000000 | d:03 a:03 A:04 s:06 | ^?GI4|p5{tRY-9z] |
-| 50.000000 | d:01 a:05 A:05 s:05 | $geO3vI"Q,s_lE?P |
-| 50.000000 | d:02 a:03 A:04 s:07 | ]J<0u4#pL($;DK*j |
-| 50.000000 | d:02 a:04 A:02 s:08 | :/u'W`m<!8+nO6@h |
-| 50.000000 | d:02 a:04 A:06 s:04 | E3o#dBCP@FV/fv}7 |
-| 50.000000 | d:01 a:04 A:05 s:06 | [C1(|$dKe!XkgU?V |
-| 50.000000 | d:03 a:04 A:05 s:04 | G*gdpi<[7PJ2U:4A |
-|___________|_____________________|__________________|
+Policy: d:3:16 a:3:16 A:3:16 s:3:16 u:0:0 U:0:0
+Best entropy for charset and length: 105,11768973
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ _________________________________________________________________
+|              |                               |                  |
+|   Entropy    |             Stats             | Password         |
+|______________|_______________________________|__________________|
+| 103,11768973 | d:03 a:03 A:05 s:05 u:00 U:00 | n&R;2\}=H7q6dRWO |
+|  98,36280223 | d:03 a:04 A:05 s:04 u:00 U:00 | ;RIRt6*"Z6u[jqR8 |
+| 105,11768973 | d:03 a:03 A:04 s:06 u:00 U:00 | ]F0,6Rb9UWg<^/p# |
+| 103,11768973 | d:03 a:04 A:06 s:03 u:00 U:00 | ?hF)RWz9Gf9U,Dn2 |
+| 100,36280223 | d:03 a:06 A:04 s:03 u:00 U:00 | S-4jAqq0!s^fU2qD |
+| 105,11768973 | d:03 a:05 A:05 s:03 u:00 U:00 | pHIqtsr J=50F4Q' |
+| 103,11768973 | d:03 a:05 A:03 s:05 u:00 U:00 | 9'2)Iki{KZ)"pt3b |
+| 101,11768973 | d:04 a:04 A:03 s:05 u:00 U:00 | *nY6Z8E!1hb<6,=b |
+| 105,11768973 | d:04 a:03 A:04 s:05 u:00 U:00 | 0T|U2YjhKa.67$ - |
+| 103,11768973 | d:03 a:04 A:05 s:04 u:00 U:00 | d<05D&5.oCIbX!uE |
+|______________|_______________________________|__________________|
 
 #
-# Generating passwors with at least 4 digits, 4 lower case letters,
-# 4 upper case letters, and 4 special characters.
+# Generating passwords with at least one character of every charset
+# type, including lower-case and upper-case UTF-8 characters.
 #
-$ genpasswd -l 16 -c 10 -t -v -d 4 -a 4 -A 4 -s 4
+$ genpasswd -l 16 -c 10 -t -v -u 1 -U 1
 
-Symbols: 94
+Symbols: 163
 Password length: 16
-Best entropy for length: 50.000000
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
- ____________________________________________________
-|           |                     |                  |
-|  Entropy  |       Stats         | Password         |
-|___________|_____________________|__________________|
-| 50.000000 | d:04 a:04 A:04 s:04 | M2*58guH,JoQ<0q$ |
-| 50.000000 | d:04 a:04 A:04 s:04 | WG>Z'xl@564N9#tv |
-| 50.000000 | d:04 a:04 A:04 s:04 | k2!q(AfT}-r0DK98 |
-| 50.000000 | d:04 a:04 A:04 s:04 | u5L"j/6O1X)<w7Kg |
-| 50.000000 | d:04 a:04 A:04 s:04 | a&9;17dY2]FxU{Av |
-| 50.000000 | d:04 a:04 A:04 s:04 | (?c3TLRvj28'@7yH |
-| 50.000000 | d:04 a:04 A:04 s:04 | t,6PA9v]8qG7i^B* |
-| 50.000000 | d:04 a:04 A:04 s:04 | 9w3V#S6vd[$,Z4Ho |
-| 50.000000 | d:04 a:04 A:04 s:04 | T$ip75dK"RU94@r. |
-| 50.000000 | d:04 a:04 A:04 s:04 | D,$zo1.70Ic~Gn4A |
-|___________|_____________________|__________________|
+Policy: d:1:16 a:1:16 A:1:16 s:1:16 u:1:16 U:1:16
+Best entropy for charset and length: 117,57965047
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"àáâãäåæçðèéêëœìíîïñòóôõöøŧþùúûüýŷÿÀÁÂÃÄÅÆÇÐÈÉÊËŒÌÍÎÏÑÒÓÔÕÖØŦÞÙÚÛÜÝŶŸ
+ _________________________________________________________________
+|              |                               |                  |
+|   Entropy    |             Stats             | Password         |
+|______________|_______________________________|__________________|
+| 113,57965047 | d:02 a:02 A:04 s:03 u:03 U:02 | eþB~êS"6B4ÜyÇWô+ |
+| 117,57965047 | d:01 a:03 A:02 s:04 u:02 U:04 | !ÌòfÐæÓ"4vwIY<|Ï |
+| 115,57965047 | d:01 a:02 A:03 s:04 u:02 U:04 | Çòy}ÚÊÞRfR~]%T1ä |
+| 117,57965047 | d:01 a:01 A:03 s:07 u:02 U:02 | PçSgÂ>7\'ÕŷW@}.* |
+| 115,57965047 | d:03 a:04 A:01 s:03 u:02 U:03 | 6çöfÄ-]tMbÒ3Î8i( |
+| 115,57965047 | d:01 a:04 A:01 s:01 u:03 U:06 | øÚÒinzdøÌØXÊâ?6Ŧ |
+| 113,57965047 | d:02 a:03 A:02 s:04 u:02 U:03 |  3òÛrEAc"2s,@ÀçÛ |
+| 115,57965047 | d:01 a:03 A:02 s:01 u:01 U:08 | Wu&ÁÐÁÝÌ9ÂjØÀYŧh |
+| 117,57965047 | d:01 a:04 A:04 s:02 u:03 U:02 | A0{JødEtÆóòOpÈ]b |
+| 115,57965047 | d:02 a:01 A:02 s:02 u:04 U:05 | )X1ÁÑÈÑ y6æüîŶŷJ |
+|______________|_______________________________|__________________|
 
 #
-# Generating passwors with at least 1 digits,
-# 1 lower case letters, and no other symbols.
+# Generate passwords with maximum entropy (best possible entropy for charset and length).
+# Note: This only means the passwords will have no repetition, but doesn't guarantee anything
+# about password strength in general.
 #
-$ genpasswd -l 16 -c 10 -t -v -d 1 -a 1
+$ genpasswd -c 10 -t -v -e max
 
-Symbols: 36
+Symbols: 95
 Password length: 16
-Best entropy for length: 50.000000
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyz
- ____________________________________________________
-|           |                     |                  |
-|  Entropy  |       Stats         | Password         |
-|___________|_____________________|__________________|
-| 50.000000 | d:03 a:13 A:00 s:00 | vzd9yc2nljoh3qia |
-| 50.000000 | d:06 a:10 A:00 s:00 | 5kiw81tyq06d4pah |
-| 50.000000 | d:02 a:14 A:00 s:00 | 9ojdi8aytqswngbf |
-| 50.000000 | d:03 a:13 A:00 s:00 | czwg0rhsk86uiead |
-| 50.000000 | d:04 a:12 A:00 s:00 | mts1cyln28po3eif |
-| 50.000000 | d:07 a:09 A:00 s:00 | daz3mcj0851o6fk7 |
-| 50.000000 | d:04 a:12 A:00 s:00 | t3ghykc0px6meiu7 |
-| 50.000000 | d:07 a:09 A:00 s:00 | 8g7e2qs9tu53zv1c |
-| 50.000000 | d:05 a:11 A:00 s:00 | xv1p4le57sq2nmud |
-| 50.000000 | d:02 a:14 A:00 s:00 | jh9krf2qsuaxevyn |
-|___________|_____________________|__________________|
+Policy: d:1:16 a:1:16 A:1:16 s:1:16 u:0:0 U:0:0
+Best entropy for charset and length: 105,11768973
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ _________________________________________________________________
+|              |                               |                  |
+|   Entropy    |             Stats             | Password         |
+|______________|_______________________________|__________________|
+| 105,11768973 | d:02 a:05 A:04 s:05 u:00 U:00 | 0aoFsN\d6J_&}v`P |
+| 105,11768973 | d:03 a:05 A:03 s:05 u:00 U:00 | fa_2Qg1Jt+(4jY<" |
+| 105,11768973 | d:04 a:05 A:01 s:06 u:00 U:00 | [x82/<oO"96-ilt, |
+| 105,11768973 | d:01 a:02 A:06 s:07 u:00 U:00 | c^O$_N=FUPG9,{#o |
+| 105,11768973 | d:02 a:03 A:05 s:06 u:00 U:00 | ?-Aw@6Fx}~HO 1Bo |
+| 105,11768973 | d:01 a:02 A:05 s:08 u:00 U:00 | @9t{YQVR+<,^kC|~ |
+| 105,11768973 | d:02 a:01 A:07 s:06 u:00 U:00 | Iq?.;QU:1F@A!JY2 |
+| 105,11768973 | d:02 a:05 A:02 s:07 u:00 U:00 | ~N!<i.97'Pfp*nb; |
+| 105,11768973 | d:01 a:05 A:04 s:06 u:00 U:00 | 3RrNziBa-:}!_E'c |
+| 105,11768973 | d:02 a:03 A:07 s:04 u:00 U:00 | TDV_sIAE7B"dl@4% |
+|______________|_______________________________|__________________|
+
+#
+# Generate passwords with exactly one character repeated.
+#
+$ genpasswd -c 10 -t -v -e 103:105
+
+Symbols: 95
+Password length: 16
+Policy: d:1:16 a:1:16 A:1:16 s:1:16 u:0:0 U:0:0
+Best entropy for charset and length: 105,11768973
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ _________________________________________________________________
+|              |                               |                  |
+|   Entropy    |             Stats             | Password         |
+|______________|_______________________________|__________________|
+| 103,11768973 | d:03 a:06 A:03 s:04 u:00 U:00 | qwrZ^~0e<X~u26bT |
+| 103,11768973 | d:03 a:03 A:02 s:08 u:00 U:00 | g}'_]1,#g<20OfZ~ |
+| 103,11768973 | d:02 a:04 A:03 s:07 u:00 U:00 | 8dgHn<Y||/~1:F&r |
+| 103,11768973 | d:01 a:05 A:05 s:05 u:00 U:00 | `MYY*eJ8=G!s^jay |
+| 103,11768973 | d:01 a:04 A:05 s:06 u:00 U:00 | guUY&$A;^`mV5u[O |
+| 103,11768973 | d:02 a:02 A:07 s:05 u:00 U:00 | G-JGY9q$)6L`v"OI |
+| 103,11768973 | d:02 a:01 A:06 s:07 u:00 U:00 | N-;VDD"U6a5?}>Z` |
+| 103,11768973 | d:02 a:03 A:05 s:06 u:00 U:00 | F- Bq=UT_hj5J&_3 |
+| 103,11768973 | d:01 a:04 A:04 s:07 u:00 U:00 | [?\=j`OjZiQ.6@nV |
+| 103,11768973 | d:04 a:04 A:02 s:06 u:00 U:00 | ItCx7.z0%,*5h)3. |
+|______________|_______________________________|__________________|
 
 #
 # Checking entropy generated by other password generators.
-# Password length has to be the same for both program to display correctly.
 #
-$ pwgen -s -y 16 10 | genpasswd -l 16 -t -v --check-entropy
+$ pwgen -s -y 16 10 | genpasswd -l 16 -t -v -C
 
-Symbols: 94
+Symbols: 95
 Password length: 16
-Best entropy for length: 50.000000
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
- ____________________________________________________
-|           |                     |                  |
-|  Entropy  |       Stats         | Password         |
-|___________|_____________________|__________________|
-| 50.000000 | d:01 a:07 A:02 s:06 | w#q;|/i~V1*cLbxg |
-| 48.142622 | d:02 a:02 A:06 s:06 | KK9KB1.=Wz!F#e&% |
-| 48.437500 | d:03 a:04 A:03 s:06 | &126&/hZb"GvgL<< |
-| 48.437500 | d:02 a:07 A:04 s:03 | xQfrQ9*fXzD?"py8 |
-| 48.437500 | d:02 a:02 A:03 s:09 | %%i9|:RJ0/u?:}\N |
-| 49.218750 | d:02 a:03 A:06 s:05 | 4-G&TcPy=Mz{M]9W |
-| 49.218750 | d:01 a:05 A:07 s:03 | bKX.Tr3miW;qTV~A |
-| 49.218750 | d:01 a:04 A:06 s:05 | WAIfE#d`[H0Ys@c[ |
-| 48.437500 | d:02 a:05 A:05 s:04 | &Q8H~vSMggiW~5w| |
-| 49.218750 | d:01 a:05 A:05 s:05 | J!"!tVCp-6fFq^gK |
-|___________|_____________________|__________________|
-
-#
-# Checking entropy of genpasswd itself for reference.
-#
-$ genpasswd -l 16 -c 10 | genpasswd -l 16 -t -v --check-entropy
-
-Symbols: 94
-Password length: 16
-Best entropy for length: 50.000000
-Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
- ____________________________________________________
-|           |                     |                  |
-|  Entropy  |       Stats         | Password         |
-|___________|_____________________|__________________|
-| 50.000000 | d:01 a:08 A:03 s:04 | ?c-"gaLR'M1mkiep |
-| 50.000000 | d:02 a:04 A:06 s:04 | 7'E8qF@pV_hTuBP- |
-| 50.000000 | d:02 a:02 A:07 s:05 | !:^3"M8LQNcB'PDi |
-| 50.000000 | d:02 a:01 A:08 s:05 | Z2e{|EI@ASHW;8N/ |
-| 50.000000 | d:03 a:04 A:05 s:04 | I/PU]62rXM)|5ihk |
-| 50.000000 | d:02 a:05 A:02 s:07 | 5w.j8Eu/cq=P}|$+ |
-| 50.000000 | d:01 a:04 A:04 s:07 | ?A!;9d+hUn>uBR)/ |
-| 50.000000 | d:01 a:03 A:06 s:06 | VEO+R&uovY6^@$Z] |
-| 50.000000 | d:01 a:04 A:05 s:06 | UOL\il[!g9T,|I`y |
-| 50.000000 | d:01 a:04 A:03 s:08 | ~e}snX'<&;f)"2YN |
-|___________|_____________________|__________________|
+Policy: d:1:16 a:1:16 A:1:16 s:1:16 u:0:0 U:0:0
+Best entropy for charset and length: 105,11768973
+Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'()*+,-./:;<=>?@[\]^_`{|}~"
+ _________________________________________________________________
+|              |                               |                  |
+|   Entropy    |             Stats             | Password         |
+|______________|_______________________________|__________________|
+|  99,11768973 | d:02 a:04 A:06 s:04 u:00 U:00 | kMP0|+D#y0k@mNVP |
+| 105,11768973 | d:03 a:02 A:04 s:07 u:00 U:00 | c='V`B>9<UR3%_x7 |
+| 105,11768973 | d:01 a:04 A:06 s:05 u:00 U:00 | Hs?!0gBP/cN$}bEV |
+| 103,11768973 | d:02 a:01 A:05 s:08 u:00 U:00 | PS~+>-x[?8DWT[$4 |
+| 103,11768973 | d:04 a:06 A:02 s:04 u:00 U:00 | kuA~Oa(d6o5'89#k |
+| 105,11768973 | d:01 a:07 A:02 s:06 u:00 U:00 | i)ce_?ERn2>-rlv' |
+|  99,11768973 | d:02 a:01 A:07 s:06 u:00 U:00 | #Z<DbL~\\77JF$ZT |
+| 105,11768973 | d:02 a:05 A:04 s:05 u:00 U:00 | 5-zIiS"pkM1T=n~/ |
+|  95,11768973 | d:02 a:00 A:09 s:05 u:00 U:00 | CH#!X1Y9CG%%D*CC |
+| 103,11768973 | d:01 a:06 A:03 s:06 u:00 U:00 | w|p"0r$gP;w>BcK[ |
+|______________|_______________________________|__________________|
 
