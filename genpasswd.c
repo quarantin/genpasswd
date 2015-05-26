@@ -154,6 +154,13 @@ static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen)
 	struct pwd_policy policy = conf->policy;
 
 	get_pwd_stats(conf, pwd, pwdlen, &stat);
+
+	if (conf->opt_entropy && stat.entropy < policy.entropy.dmin)
+		return 0;
+
+	if (conf->opt_entropy && stat.entropy > policy.entropy.dmax)
+		return 0;
+
 	return ((policy.d.min <= stat.d && stat.d <= policy.d.max) &&
 		(policy.a.min <= stat.a && stat.a <= policy.a.max) &&
 		(policy.A.min <= stat.A && stat.A <= policy.A.max) &&
@@ -316,9 +323,6 @@ static void generate_passwords (struct config *conf)
 		if (gen_passwd(conf, pwd, pwdlen + 1)) {
 
 			get_pwd_stats(conf, pwd, pwdlen, &stat);
-			if (conf->opt_min_entropy && stat.entropy < conf->policy.min_entropy)
-				continue;
-
 			print_passwd(conf, pwd, pwdlen, &stat);
 			i++;
 		}
@@ -356,8 +360,11 @@ int main (int argc, char **argv)
 	}
 
 	best_entropy = conf.policy.best_entropy;
-	if (conf.policy.min_entropy == 0.0 || conf.policy.min_entropy == -1.0)
-		conf.policy.min_entropy = best_entropy;
+	if (conf.policy.entropy.dmin == 0.0 || conf.policy.entropy.dmin == -1.0)
+		conf.policy.entropy.dmin = floor(best_entropy);
+
+	if (conf.policy.entropy.dmax == 0.0 || conf.policy.entropy.dmax == -1.0)
+		conf.policy.entropy.dmax = ceil(best_entropy);
 
 	conf.urandom_fd = open("/dev/urandom", O_RDONLY);
 	if (conf.urandom_fd < 0) {
@@ -371,8 +378,8 @@ int main (int argc, char **argv)
 		printf("\n");
 		printf("Symbols: %lu\n", conf.alphabet_size);
 		printf("Password length: %lu\n", pwdlen);
-		printf("Best entropy for length: %.8lf\n", best_entropy);
 		print_policy(&conf);
+		printf("Best entropy for charset and length: %12.8lf\n", best_entropy);
 		printf("Alphabet: %ls\n", conf.alphabet);
 		if (!conf.opt_table)
 			printf("\n");

@@ -33,8 +33,8 @@ static struct option options[] = {
 	{ "UTF8",          required_argument, 0, 'U' },
 	{ "check-entropy", no_argument,       0, 'C' },
 	{ "count",         required_argument, 0, 'c' },
+	{ "entropy",       required_argument, 0, 'e' },
 	{ "length",        required_argument, 0, 'l' },
-	{ "min-entropy",   required_argument, 0, 'm' },
 	{ "no-policy",     no_argument,       0, 'n' },
 	{ "show-stats",    no_argument,       0, 'S' },
 	{ "table",         no_argument,       0, 't' },
@@ -61,8 +61,8 @@ static void usage (struct config *conf, char *name)
 			"\t-C, --check-entropy         Don't generate, instead check entropy of\n"
 			"\t                            passwords supplied through stdin.\n"
 			"\t-c, --count <num>           Number of passwords to generate.\n"
+			"\t-e, --entropy <min>[:<max>] Select passwords with entropy in given range.\n"
 			"\t-l, --length <num>          Password length.\n"
-			"\t-m, --min-entropy <double>  Minimum entropy in bits.\n"
 			"\t-n, --no-policy             Don't check password policy.\n"
 			"\t-S, --show-stats            Show entropy and statistics for generated\n"
 			"\t                            passwords.\n"
@@ -76,19 +76,41 @@ static void usage (struct config *conf, char *name)
 	exit(EXIT_SUCCESS);
 }
 
-static int parse_range (struct config *conf, char *optarg, struct range *range)
+#define PARSE_INTEGER 1
+#define PARSE_ENTROPY 2
+
+static int parse_range (struct config *conf, char *optarg, struct range *range, int type)
 {
         char *ptr;
 
+	memset(range, 0, sizeof(*range));
+
         ptr = strchr(optarg, ':');
-        if (ptr) {
-                range->min = strtoul(optarg, NULL, 10);
-                range->max = strtoul(ptr + 1,     NULL, 10);
-        }
-        else {
-                range->min = strtoul(optarg, NULL, 10);
-                range->max = conf->policy.pwdlen;
-        }
+	if (type == PARSE_INTEGER) {
+
+		if (ptr) {
+			range->min = strtoul(optarg, NULL, 10);
+			range->max = strtoul(ptr + 1, NULL, 10);
+		}
+		else {
+			range->min = strtoul(optarg, NULL, 10);
+			range->max = conf->policy.pwdlen;
+		}
+	}
+	else if (type == PARSE_ENTROPY) {
+
+		if (ptr) {
+			range->dmin = strtod(optarg, NULL);
+			range->dmax = strtod(ptr + 1, NULL);
+		}
+		else {
+			range->dmin = strtod(optarg, NULL);
+			range->dmax = -1.0;
+		}
+	}
+	else {
+		return -1;
+	}
 
         if (range->min > range->max)
                 return -1;
@@ -106,7 +128,7 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 
 	while (1) {
 
-		c = getopt_long(argc, argv, "hd:a:A:s:u:U:Cc:el:m:nStv", options, NULL);
+		c = getopt_long(argc, argv, "hd:a:A:s:u:U:Cc:e:l:nStv", options, NULL);
 		if (c == -1)
 			break;
 
@@ -117,31 +139,31 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 				break;
 
 			case 'd':
-				err = parse_range(conf, optarg, &conf->policy.d);
+				err = parse_range(conf, optarg, &conf->policy.d, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
 			case 'a':
-				err = parse_range(conf, optarg, &conf->policy.a);
+				err = parse_range(conf, optarg, &conf->policy.a, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
 			case 'A':
-				err = parse_range(conf, optarg, &conf->policy.A);
+				err = parse_range(conf, optarg, &conf->policy.A, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
 			case 's':
-				err = parse_range(conf, optarg, &conf->policy.s);
+				err = parse_range(conf, optarg, &conf->policy.s, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
 			case 'u':
-				err = parse_range(conf, optarg, &conf->policy.u);
+				err = parse_range(conf, optarg, &conf->policy.u, PARSE_INTEGER);
 				break;
 
 			case 'U':
-				err = parse_range(conf, optarg, &conf->policy.U);
+				err = parse_range(conf, optarg, &conf->policy.U, PARSE_INTEGER);
 				break;
 
 			case 'C':
@@ -152,16 +174,19 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 				conf->opt_passwd_count = strtoul(optarg, NULL, 10);
 				break;
 
-			case 'l':
-				conf->policy.pwdlen = strtoul(optarg, NULL, 10);
+			case 'e':
+				conf->opt_entropy = 1;
+				if (!strcasecmp(optarg, "max")) {
+					conf->policy.entropy.min = (size_t)-1.0;
+					conf->policy.entropy.max = (size_t)-1.0;
+				}
+				else {
+					err = parse_range(conf, optarg, &conf->policy.entropy, PARSE_ENTROPY);
+				}
 				break;
 
-			case 'm':
-				conf->opt_min_entropy = 1;
-				if (!strcasecmp(optarg, "max"))
-					conf->policy.min_entropy = -1.0;
-				else
-					conf->policy.min_entropy = strtod(optarg, NULL) - 0.00000001;
+			case 'l':
+				conf->policy.pwdlen = strtoul(optarg, NULL, 10);
 				break;
 
 			case 'n':

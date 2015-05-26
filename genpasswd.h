@@ -62,6 +62,8 @@
 struct range {
 	size_t min;
 	size_t max;
+	double dmin;
+	double dmax;
 };
 
 struct pwd_stat {
@@ -81,7 +83,7 @@ struct pwd_policy {
 	struct range s;
 	struct range u;
 	struct range U;
-	double min_entropy;
+	struct range entropy;
 	double best_entropy;
 	size_t pwdlen;
 };
@@ -95,7 +97,7 @@ struct config {
 	int opt_check_entropy;
 	int opt_check_policy;
 	int opt_show_stats;
-	int opt_min_entropy;
+	int opt_entropy;
 	int opt_passwd_count;
 	int opt_table;
 	int opt_header;
