@@ -8,11 +8,11 @@ Usage:
 Where options might be a combination of:
 	-h, --help                  Show this help and exit.
 	-d, --digit <min>[:<max>]   Include at least <min> digits.
-	-a, --alpha <min>[:<max>]   Include at least <min> lower case letters.
-	-A, --ALPHA <min>[:<max>]   Include at least <min> upper case letters.
+	-a, --alpha <min>[:<max>]   Include at least <min> lower-case letters.
+	-A, --ALPHA <min>[:<max>]   Include at least <min> upper-case letters.
 	-s, --special <min>[:<max>] Include at least <min> special characters.
-	-u, --utf8 <min>[:<max>]    Include at least <min> lower case UTF-8 characters.
-	-U, --UTF8 <min>[:<max>]    Include at least <min> upper case UTF-8 characters.
+	-u, --utf8 <min>[:<max>]    Include at least <min> lower-case UTF-8 characters.
+	-U, --UTF8 <min>[:<max>]    Include at least <min> upper-case UTF-8 characters.
 	-C, --check-entropy         Don't generate, instead check entropy of
 	                            passwords supplied through stdin.
 	-c, --count <num>           Number of passwords to generate.
@@ -90,7 +90,7 @@ Alphabet: 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ !#$%&'(
 |_____________|_______________________________|______________|
 
 #
-# Generating passwors with at least 3 digits, 3 lower case letters,
+# Generating passwords with at least 3 digits, 3 lower case letters,
 # 3 upper case letters, and 3 special characters.
 #
 $ genpasswd -c 10 -l 16 -t -v -d 3 -a 3 -A 3 -s 3
