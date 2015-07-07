@@ -34,6 +34,13 @@
 
 static struct config conf;
 
+static int quit (int status)
+{
+	close(conf.urandom_fd);
+	free(conf.alphabet);
+	exit(status);
+}
+
 static int iswspecial (wchar_t wc)
 {
 	return wcschr(conf.opt_ascii_special.val, wc) ? 1 : 0;
