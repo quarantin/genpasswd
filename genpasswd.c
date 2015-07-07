@@ -92,8 +92,7 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 	ok = hcreate(datasz);
 	if (!ok) {
 		perror("hcreate failed");
-		// TODO better exit, or at least cleanup before exiting
-		exit(EXIT_FAILURE);
+		quit(EXIT_FAILURE);
 	}
 
 	for (i = 0; i < datasz; i++)
@@ -149,10 +148,10 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 	}
 }
 
-#define CHECK_POLICY(policy, stat, alphabet) do {                           \
-	if ((policy.alphabet.min && stat.alphabet < policy.alphabet.min) || \
-	    (policy.alphabet.max && stat.alphabet > policy.alphabet.max))   \
-		return 0;                                                   \
+#define CHECK_POLICY(policy, stats, alphabet) do {                           \
+	if ((policy.alphabet.min && stats.alphabet < policy.alphabet.min) || \
+	    (policy.alphabet.max && stats.alphabet > policy.alphabet.max))   \
+		return 0;                                                    \
 } while (0)
 
 static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen)
@@ -227,7 +226,6 @@ static size_t gen_sub_passwd (int urandom_fd, wchar_t *pwd, size_t pwdlen, strin
 
 static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 {
-
 	wchar_t *ptr = pwd;
 
 	// FIXME just avoid warning but pwdsz should be used!
@@ -244,6 +242,7 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 	pwd[conf->policy.pwdlen] = L'\0';
 	*ptr = L'\0';
 
+	//get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
 	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen))
 		return NULL;
 
@@ -382,7 +381,7 @@ static void generate_passwords (struct config *conf)
 	int i;
 	size_t pwdlen;
 	wchar_t *pwd;
-	struct pwd_stat stat;
+	struct pwd_stat stats;
 
 	pwdlen = get_max_len(conf->policy);
 	pwd = malloc((pwdlen + 1) * sizeof(wchar_t));
@@ -395,8 +394,8 @@ static void generate_passwords (struct config *conf)
 
 		if (gen_passwd(conf, pwd, pwdlen + 1)) {
 
-			get_pwd_stats(conf, pwd, conf->policy.pwdlen, &stat);
-			print_passwd(conf, pwd, pwdlen, &stat);
+			get_pwd_stats(conf, pwd, conf->policy.pwdlen, &stats);
+			print_passwd(conf, pwd, pwdlen, &stats);
 			i++;
 		}
 	}
