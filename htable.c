@@ -12,10 +12,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
+#include <stdlib.h>
 #include <wchar.h>
 #include <search.h>
-
-#include "genpasswd.h"
 
 int wc_to_key (wchar_t wc, char *key, size_t keysz)
 {
@@ -97,16 +97,16 @@ int ht_get (wchar_t wc)
 	return (int)(long)pentry->data;
 }
 
-void ht_del (struct config *conf)
+void ht_del (wchar_t *keys, size_t keyssz)
 {
 	int err;
 	size_t i;
 	ENTRY entry, *pentry;
 	char key[sizeof(wchar_t) + 1];
 
-	for (i = 0; i < conf->alphabet_size; i++) {
+	for (i = 0; i < keyssz; i++) {
 
-		err = wc_to_key(conf->alphabet[i], key, sizeof(key));
+		err = wc_to_key(keys[i], key, sizeof(key));
 		if (err) {
 			fprintf(stderr, "FATAL: wc_to_key failed\n");
 			// TODO better error handling

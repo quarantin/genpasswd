@@ -98,7 +98,7 @@ static double compute_entropy (struct config *conf, const wchar_t *data, size_t 
 			entropy -= freq * log2((double)freq / conf->alphabet_size);
 	}
 
-	ht_del(conf);
+	ht_del(conf->alphabet, conf->alphabet_size);
 	hdestroy();
 	return entropy;
 }

@@ -17,14 +17,12 @@
 
 #include <wchar.h>
 
-#include "genpasswd.h"
-
 int wc_to_key (wchar_t wc, char *key, size_t keysz);
 
 void update_frequencies (wchar_t wc);
 
 int ht_get (wchar_t wc);
 
-void ht_del (struct config *conf);
+void ht_del (wchar_t *keys, size_t keyssz);
 
 #endif /* HTABLE_H */
