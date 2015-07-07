@@ -223,10 +223,9 @@ static size_t gen_sub_passwd (int urandom_fd, wchar_t *pwd, size_t pwdlen, strin
 	return pwdlen;
 }
 
-static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
+static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz, struct pwd_stat *stats)
 {
 	wchar_t *ptr = pwd;
-	struct pwd_stat stats;
 
 	// FIXME just avoid warning but pwdsz should be used!
 	if (pwdsz) {}
@@ -242,9 +241,9 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 	pwd[conf->policy.pwdlen] = L'\0';
 	*ptr = L'\0';
 
-	//get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
-	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, &stats))
-		return NULL;
+	get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
+	//if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, &stats))
+	//	return NULL;
 
 	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
 	//printf("DEBUG WTFFFF: pwdsz = %lu, ptr - pwd = %lu\n", pwdsz, ptr - pwd);
@@ -392,9 +391,9 @@ static void generate_passwords (struct config *conf)
 
 	for (i = 0; i < conf->opt_passwd_count;) {
 
-		if (gen_passwd(conf, pwd, pwdlen + 1)) {
+		if (gen_passwd(conf, pwd, pwdlen + 1, &stats)) {
 
-			get_pwd_stats(conf, pwd, conf->policy.pwdlen, &stats);
+	//		get_pwd_stats(conf, pwd, conf->policy.pwdlen, &stats);
 			print_passwd(conf, pwd, pwdlen, &stats);
 			i++;
 		}
