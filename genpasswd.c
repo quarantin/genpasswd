@@ -148,32 +148,31 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 	}
 }
 
-#define CHECK_POLICY(policy, stats, alphabet) do {                           \
-	if ((policy.alphabet.min && stats.alphabet < policy.alphabet.min) || \
-	    (policy.alphabet.max && stats.alphabet > policy.alphabet.max))   \
-		return 0;                                                    \
+#define CHECK_POLICY(policy, stats, alphabet) do {                            \
+	if ((policy.alphabet.min && stats->alphabet < policy.alphabet.min) || \
+	    (policy.alphabet.max && stats->alphabet > policy.alphabet.max))   \
+		return 0;                                                     \
 } while (0)
 
-static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen)
+static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stats)
 {
-	struct pwd_stat stat;
 	struct pwd_policy policy = conf->policy;
 
-	get_pwd_stats(conf, pwd, pwdlen, &stat);
+	get_pwd_stats(conf, pwd, pwdlen, stats);
 
-	if (conf->opt_entropy && stat.entropy < policy.entropy.dmin)
+	if (conf->opt_entropy && stats->entropy < policy.entropy.dmin)
 		return 0;
 
-	if (conf->opt_entropy && stat.entropy > policy.entropy.dmax)
+	if (conf->opt_entropy && stats->entropy > policy.entropy.dmax)
 		return 0;
 
-	CHECK_POLICY(policy, stat, ascii_digit);
-	CHECK_POLICY(policy, stat, ascii_alpha_lower);
-	CHECK_POLICY(policy, stat, ascii_alpha_upper);
-	CHECK_POLICY(policy, stat, ascii_special);
+	CHECK_POLICY(policy, stats, ascii_digit);
+	CHECK_POLICY(policy, stats, ascii_alpha_lower);
+	CHECK_POLICY(policy, stats, ascii_alpha_upper);
+	CHECK_POLICY(policy, stats, ascii_special);
 	//printf("policy.alphabet.min = %ld | policy.alphabet.max = %ld | stat.alphabet = %ld\n", policy.utf8_alpha_lower.min, policy.utf8_alpha_lower.max, stat.utf8_alpha_lower);
-	CHECK_POLICY(policy, stat, utf8_alpha_lower);
-	CHECK_POLICY(policy, stat, utf8_alpha_upper);
+	CHECK_POLICY(policy, stats, utf8_alpha_lower);
+	CHECK_POLICY(policy, stats, utf8_alpha_upper);
 
 	return 1;
 }
@@ -227,6 +226,7 @@ static size_t gen_sub_passwd (int urandom_fd, wchar_t *pwd, size_t pwdlen, strin
 static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 {
 	wchar_t *ptr = pwd;
+	struct pwd_stat stats;
 
 	// FIXME just avoid warning but pwdsz should be used!
 	if (pwdsz) {}
@@ -243,7 +243,7 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 	*ptr = L'\0';
 
 	//get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
-	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen))
+	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, &stats))
 		return NULL;
 
 	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
