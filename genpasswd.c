@@ -158,8 +158,6 @@ static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen, struc
 {
 	struct pwd_policy policy = conf->policy;
 
-	get_pwd_stats(conf, pwd, pwdlen, stats);
-
 	if (conf->opt_entropy && stats->entropy < policy.entropy.dmin)
 		return 0;
 
@@ -242,8 +240,8 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz, str
 	*ptr = L'\0';
 
 	get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
-	//if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, &stats))
-	//	return NULL;
+	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, stats))
+		return NULL;
 
 	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
 	//printf("DEBUG WTFFFF: pwdsz = %lu, ptr - pwd = %lu\n", pwdsz, ptr - pwd);
@@ -393,7 +391,6 @@ static void generate_passwords (struct config *conf)
 
 		if (gen_passwd(conf, pwd, pwdlen + 1, &stats)) {
 
-	//		get_pwd_stats(conf, pwd, conf->policy.pwdlen, &stats);
 			print_passwd(conf, pwd, pwdlen, &stats);
 			i++;
 		}
