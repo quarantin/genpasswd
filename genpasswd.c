@@ -154,7 +154,7 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 		return 0;                                                     \
 } while (0)
 
-static int check_policy (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stats)
+static int check_policy (struct config *conf, struct pwd_stat *stats)
 {
 	struct pwd_policy policy = conf->policy;
 
@@ -240,7 +240,7 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz, str
 	*ptr = L'\0';
 
 	get_pwd_stats(conf, pwd, conf->policy.pwdlen, stats);
-	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen, stats))
+	if (conf->opt_check_policy && !check_policy(conf, stats))
 		return NULL;
 
 	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
