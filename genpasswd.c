@@ -108,33 +108,33 @@ static double compute_best_entropy (struct config *conf, size_t pwdlen)
 	return pwdlen * log2(conf->alphabet_size);
 }
 
-static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stat)
+static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, struct pwd_stat *stats)
 {
 	size_t i;
 
-	memset(stat, 0, sizeof(*stat));
+	memset(stats, 0, sizeof(*stats));
 
-	stat->entropy = compute_entropy(conf, pwd, pwdlen);
+	stats->entropy = compute_entropy(conf, pwd, pwdlen);
 
 	for (i = 0; i < pwdlen; i++) {
 	
 		if (isutf8lower(pwd[i])) {
-			stat->utf8_alpha_lower++;
+			stats->utf8_alpha_lower++;
 		}
 		else if (isutf8upper(pwd[i])) {
-			stat->utf8_alpha_upper++;
+			stats->utf8_alpha_upper++;
 		}
 		else if (iswdigit(pwd[i])) {
-			stat->ascii_digit++;
+			stats->ascii_digit++;
 		}
 		else if (iswlower(pwd[i])) {
-			stat->ascii_alpha_lower++;
+			stats->ascii_alpha_lower++;
 		}
 		else if (iswupper(pwd[i])) {
-			stat->ascii_alpha_upper++;
+			stats->ascii_alpha_upper++;
 		}
 		else if (iswspecial(pwd[i])) {
-			stat->ascii_special++;
+			stats->ascii_special++;
 		}
 		else {
 			fprintf(stderr, "Problem with get_pwd_stats '%lc'\n", pwd[i]);
@@ -217,7 +217,6 @@ static size_t gen_sub_passwd (int urandom_fd, wchar_t *pwd, size_t pwdlen, strin
 
 	return pwdlen;
 }
-
 
 static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 {
