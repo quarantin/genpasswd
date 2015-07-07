@@ -26,8 +26,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <wctype.h>
+#include <search.h>
 
 #include "genpasswd.h"
+#include "htable.h"
 #include "opts.h"
 
 static struct config conf;
@@ -77,39 +79,27 @@ static unsigned int random_num (int urandom_fd, size_t rand_max)
 static double compute_entropy (struct config *conf, const wchar_t *data, size_t datasz)
 {
 	size_t i;
+	int ok, freq;
 	double entropy = 0.0;
-	wchar_t *ptr, *utf8 = NULL;
-	char freqs[UCHAR_MAX + 1];
 
-	memset(freqs, 0, sizeof(freqs));
-
-	if (conf->first_utf8) {
-		utf8 = wcschr(conf->alphabet, *conf->first_utf8);
-		if (!utf8) {
-			fprintf(stderr, "FATAL: something went wrong!\n");
-			close(conf->urandom_fd);
-			exit(EXIT_FAILURE);
-		}
+	ok = hcreate(datasz);
+	if (!ok) {
+		perror("hcreate failed");
+		// TODO better exit, or at least cleanup before exiting
+		exit(EXIT_FAILURE);
 	}
 
-	for (i = 0; i < datasz; i++) {
+	for (i = 0; i < datasz; i++)
+		update_frequencies(data[i]);
 
-		if (data[i] < 127)
-			freqs[data[i]]++;
-		else if (utf8) {
-			ptr = wcschr(utf8, data[i]);
-			if (ptr)
-				freqs[ptr - conf->alphabet]++;
-			else
-				fprintf(stderr, "FATAL: this should never happen!\n");
-		}
+	for (i = 0; i < conf->alphabet_size; i++) {
+		freq = ht_get(conf->alphabet[i]);
+		if (freq)
+			entropy -= freq * log2((double)freq / conf->alphabet_size);
 	}
 
-	for (i = 0; i < sizeof(freqs); i++) {
-		if (freqs[i])
-			entropy -= freqs[i] * log2((double)freqs[i] / conf->alphabet_size);
-	}
-
+	ht_del(conf);
+	hdestroy();
 	return entropy;
 }
 
@@ -147,7 +137,7 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 			stat->ascii_special++;
 		}
 		else {
-			fprintf(stderr, "Problem with get_pwd_stats %lc\n", pwd[i]);
+			fprintf(stderr, "Problem with get_pwd_stats '%lc'\n", pwd[i]);
 		}
 	}
 }
@@ -234,6 +224,9 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 
 	wchar_t *ptr = pwd;
 
+	// FIXME just avoid warning but pwdsz should be used!
+	if (pwdsz) {}
+
 	ptr += gen_sub_passwd(conf->urandom_fd, ptr, conf->policy.ascii_digit.max,       &conf->opt_ascii_digit);
 	ptr += gen_sub_passwd(conf->urandom_fd, ptr, conf->policy.ascii_alpha_lower.max, &conf->opt_ascii_alpha_lower);
 	ptr += gen_sub_passwd(conf->urandom_fd, ptr, conf->policy.ascii_alpha_upper.max, &conf->opt_ascii_alpha_upper);
@@ -247,7 +240,6 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz)
 
 	if (conf->opt_check_policy && !check_policy(conf, pwd, conf->policy.pwdlen))
 		return NULL;
-
 
 	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
 	//printf("DEBUG WTFFFF: pwdsz = %lu, ptr - pwd = %lu\n", pwdsz, ptr - pwd);
@@ -359,6 +351,16 @@ static void check_entropy (struct config *conf)
 	}
 }
 
+static size_t get_min_len (struct pwd_policy policy)
+{
+	return policy.ascii_digit.min
+		+ policy.ascii_alpha_lower.min
+		+ policy.ascii_alpha_upper.min
+		+ policy.ascii_special.min
+		+ policy.utf8_alpha_lower.min
+		+ policy.utf8_alpha_lower.min;
+}
+
 static size_t get_max_len (struct pwd_policy policy)
 {
 	return policy.ascii_digit.max
@@ -405,12 +407,13 @@ int main (int argc, char **argv)
 	char border[BUFSIZ];
 	char spacer[BUFSIZ];
 
+	setlocale(LC_ALL, "");
+
 	if (!argc || !argv || !*argv) {
 		fprintf(stderr, "FATAL: Invalid arguments.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	setlocale(LC_ALL, "");
 	memset(&conf, 0, sizeof(conf));
 	if (!parse_opts(argc, argv, &conf)) {
 		fprintf(stderr, "FATAL: Failed parsing options.\n");
