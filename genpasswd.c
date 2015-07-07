@@ -158,10 +158,7 @@ static int check_policy (struct config *conf, struct pwd_stat *stats)
 {
 	struct pwd_policy policy = conf->policy;
 
-	if (conf->opt_entropy && stats->entropy < policy.entropy.dmin)
-		return 0;
-
-	if (conf->opt_entropy && stats->entropy > policy.entropy.dmax)
+	if (conf->opt_entropy && (stats->entropy < policy.entropy.dmin || stats->entropy > policy.entropy.dmax))
 		return 0;
 
 	CHECK_POLICY(policy, stats, ascii_digit);
