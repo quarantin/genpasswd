@@ -22,7 +22,7 @@ int wc_to_key (wchar_t wc, char *key, size_t keysz)
 	wchar_t wcs[2];
 	size_t written;
 
-	if (keysz != sizeof(wchar_t) + 1)
+	if (!key || keysz != sizeof(wchar_t) + 1)
 		return -1;
 
 	wcs[0] = wc;
