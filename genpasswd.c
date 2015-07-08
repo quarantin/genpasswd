@@ -41,27 +41,6 @@ static int quit (int status)
 	exit(status);
 }
 
-static int iswspecial (wchar_t wc)
-{
-	return wcschr(conf.opt_ascii_special.val, wc) ? 1 : 0;
-}
-
-static int isutf8lower (wchar_t wc)
-{
-	if (iswlower(wc))
-		return wcschr(conf.opt_utf8_alpha_lower.val, wc) ? 1 : 0;
-
-	return 0;
-}
-
-static int isutf8upper (wchar_t wc)
-{
-	if (iswupper(wc))
-		return wcschr(conf.opt_utf8_alpha_upper.val, wc) ? 1 : 0;
-
-	return 0;
-}
-
 static unsigned int random_num (int urandom_fd, size_t rand_max)
 {
 	ssize_t ret;
@@ -124,26 +103,31 @@ static void get_pwd_stats (struct config *conf, wchar_t *pwd, size_t pwdlen, str
 
 	for (i = 0; i < pwdlen; i++) {
 	
-		if (isutf8lower(pwd[i])) {
-			stats->utf8_alpha_lower++;
-		}
-		else if (isutf8upper(pwd[i])) {
-			stats->utf8_alpha_upper++;
-		}
-		else if (iswdigit(pwd[i])) {
-			stats->ascii_digit++;
-		}
-		else if (iswlower(pwd[i])) {
-			stats->ascii_alpha_lower++;
-		}
-		else if (iswupper(pwd[i])) {
-			stats->ascii_alpha_upper++;
-		}
-		else if (iswspecial(pwd[i])) {
-			stats->ascii_special++;
+		if (pwd[i] < 127) {
+
+			if (iswdigit(pwd[i])) {
+				stats->ascii_digit++;
+			}
+			else if (iswlower(pwd[i])) {
+				stats->ascii_alpha_lower++;
+			}
+			else if (iswupper(pwd[i])) {
+				stats->ascii_alpha_upper++;
+			}
+			else {
+				stats->ascii_special++;
+			}
 		}
 		else {
-			fprintf(stderr, "Problem with get_pwd_stats '%lc'\n", pwd[i]);
+			if (iswlower(pwd[i])) {
+				stats->utf8_alpha_lower++;
+			}
+			else if (iswupper(pwd[i])) {
+				stats->utf8_alpha_upper++;
+			}
+			else {
+				fprintf(stderr, "Problem with get_pwd_stats(2) '%lc' (%x)\n", pwd[i], pwd[i]);
+			}
 		}
 	}
 }
