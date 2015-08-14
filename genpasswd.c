@@ -58,7 +58,6 @@ static unsigned int random_num (int urandom_fd, size_t rand_max)
 	}
 	while (rand >= limit);
 
-	//printf("UINT_MAX = %u, limit = %u, rand_max = %lu, RAND = %lu\n", UINT_MAX, limit, rand_max, (rand % rand_max));
 	return (rand % rand_max);
 }
 
@@ -149,7 +148,6 @@ static int check_policy (struct config *conf, struct pwd_stat *stats)
 	CHECK_POLICY(policy, stats, ascii_alpha_lower);
 	CHECK_POLICY(policy, stats, ascii_alpha_upper);
 	CHECK_POLICY(policy, stats, ascii_special);
-	//printf("policy.alphabet.min = %ld | policy.alphabet.max = %ld | stat.alphabet = %ld\n", policy.utf8_alpha_lower.min, policy.utf8_alpha_lower.max, stat.utf8_alpha_lower);
 	CHECK_POLICY(policy, stats, utf8_alpha_lower);
 	CHECK_POLICY(policy, stats, utf8_alpha_upper);
 
@@ -167,12 +165,9 @@ static void shuffle (struct config *conf, wchar_t *passwd, size_t passwd_len)
 {
 	int i, j;
 
-//	printf("DEBUG INIT: %ls, passwd_len = %lu\n", passwd, passwd_len);
 	for (i = passwd_len - 1; i > 0; i--) {
 		j = random_num(conf->urandom_fd, i);
 		swap(&passwd[i], &passwd[j]);
-//		printf("DEBUG LOOP: %ls\n", passwd);
-//		printf("DEBUG LOOP: %lc\n", passwd[i]);
 	}
 }
 
@@ -224,9 +219,6 @@ static wchar_t *gen_passwd (struct config *conf, wchar_t *pwd, size_t pwdsz, str
 	if (conf->opt_check_policy && !check_policy(conf, stats))
 		return NULL;
 
-	//printf("DEBUG: BEFORE SHUFFLE: %ls\n", pwd);
-	//printf("DEBUG WTFFFF: pwdsz = %lu, ptr - pwd = %lu\n", pwdsz, ptr - pwd);
-	//printf("DEBUG: AFTER  SHUFFLE: %ls\n", pwd);
 	return pwd;
 }
 
