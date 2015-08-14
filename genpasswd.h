@@ -36,28 +36,33 @@
 #define MIN(x, y, t) ((t)(x) > (t)(y) ? (t)(y) : (t)(x))
 #define MAX(x, y, t) ((t)(x) < (t)(y) ? (t)(y) : (t)(x))
 
-#define LENGTH(x) ((sizeof(x) - sizeof(wchar_t)) / sizeof(wchar_t))
+#define LENGTH(sizeof_x) ((sizeof_x - sizeof(wchar_t)) / sizeof(wchar_t))
  
 #define ASCII_DIGIT_CHARS L"0123456789"
-#define ASCII_DIGIT_CHARS_LEN LENGTH(ASCII_DIGIT_CHARS)
+#define ASCII_DIGIT_CHARS_LEN LENGTH(sizeof(ASCII_DIGIT_CHARS))
  
-#define ASCII_LOWER_CHARS L"abcdefghijklmnopqrstuvwxyz"
-#define ASCII_LOWER_CHARS_LEN LENGTH(ASCII_LOWER_CHARS)
+#define ASCII_ALPHA_LOWER_CHARS L"abcdefghijklmnopqrstuvwxyz"
+#define ASCII_ALPHA_LOWER_CHARS_LEN LENGTH(sizeof(ASCII_ALPHA_LOWER_CHARS))
  
-#define ASCII_UPPER_CHARS L"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-#define ASCII_UPPER_CHARS_LEN LENGTH(ASCII_UPPER_CHARS)
+#define ASCII_ALPHA_UPPER_CHARS L"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define ASCII_ALPHA_UPPER_CHARS_LEN LENGTH(sizeof(ASCII_ALPHA_UPPER_CHARS))
  
 #define ASCII_SPECIAL_CHARS L" !#$%&'()*+,-./:;<=>?@[\\]^_`{|}~\""
-#define ASCII_SPECIAL_CHARS_LEN LENGTH(ASCII_SPECIAL_CHARS)
+#define ASCII_SPECIAL_CHARS_LEN LENGTH(sizeof(ASCII_SPECIAL_CHARS))
 
-#define UTF8_LOWER_CHARS L"àáâãäåæçðèéêëœìíîïñòóôõöøŧþùúûüýŷÿ"
-#define UTF8_LOWER_CHARS_LEN LENGTH(UTF8_LOWER_CHARS)
+#define UTF8_ALPHA_LOWER_CHARS L"àáâãäåæçðèéêëœìíîïñòóôõöøŧþùúûüýŷÿ"
+#define UTF8_ALPHA_LOWER_CHARS_LEN LENGTH(sizeof(UTF8_ALPHA_LOWER_CHARS))
 
-#define UTF8_UPPER_CHARS L"ÀÁÂÃÄÅÆÇÐÈÉÊËŒÌÍÎÏÑÒÓÔÕÖØŦÞÙÚÛÜÝŶŸ"
-#define UTF8_UPPER_CHARS_LEN LENGTH(UTF8_UPPER_CHARS)
+#define UTF8_ALPHA_UPPER_CHARS L"ÀÁÂÃÄÅÆÇÐÈÉÊËŒÌÍÎÏÑÒÓÔÕÖØŦÞÙÚÛÜÝŶŸ"
+#define UTF8_ALPHA_UPPER_CHARS_LEN LENGTH(sizeof(UTF8_ALPHA_UPPER_CHARS))
 
 #define UTF8_SPECIAL_CHARS L"×÷ß€" // TODO
-#define UTF8_SPECIAL_CHARS_LEN LENGTH(UTF8_SPECIAL_CHARS)
+#define UTF8_SPECIAL_CHARS_LEN LENGTH(sizeof(UTF8_SPECIAL_CHARS))
+
+typedef struct {
+	size_t len;
+	wchar_t *val;
+} string_t;
 
 struct range {
 	size_t min;
@@ -67,22 +72,24 @@ struct range {
 };
 
 struct pwd_stat {
-	size_t d; // ASCII digits;
-	size_t a; // ASCII lower case
-	size_t A; // ASCII upper case
-	size_t s; // ASCII specials
-	size_t u; // UTF-8 lower case
-	size_t U; // UTF-8 upper case
+	size_t ascii_digit;
+	size_t ascii_alpha_lower;
+	size_t ascii_alpha_upper;
+	size_t ascii_special;
+	size_t utf8_alpha_lower;
+	size_t utf8_alpha_upper;
+	size_t utf8_special;
 	double entropy;
 };
 
 struct pwd_policy {
-	struct range d;
-	struct range a;
-	struct range A;
-	struct range s;
-	struct range u;
-	struct range U;
+	struct range ascii_digit;
+	struct range ascii_alpha_lower;
+	struct range ascii_alpha_upper;
+	struct range ascii_special;
+	struct range utf8_alpha_lower;
+	struct range utf8_alpha_upper;
+	struct range utf8_special;
 	struct range entropy;
 	double best_entropy;
 	size_t pwdlen;
@@ -94,6 +101,16 @@ struct config {
 	wchar_t *first_utf8;
 	size_t alphabet_size;
 	struct pwd_policy policy;
+	int shuffle_passes;
+	string_t opt_ascii_digit;
+	string_t opt_ascii_alpha_lower;
+	string_t opt_ascii_alpha_upper;
+	string_t opt_ascii_special;
+	string_t opt_utf8_digit;
+	string_t opt_utf8_alpha_lower;
+	string_t opt_utf8_alpha_upper;
+	string_t opt_utf8_special;
+
 	int opt_check_entropy;
 	int opt_check_policy;
 	int opt_show_stats;

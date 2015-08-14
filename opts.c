@@ -16,64 +16,103 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <getopt.h>
 #include <limits.h>
 
 #include "genpasswd.h"
 
 extern struct config conf;
 
-static struct option options[] = {
-	{ "help",          no_argument,       0, 0   },
-	{ "digit",         required_argument, 0, 'd' },
-	{ "alpha",         required_argument, 0, 'a' },
-	{ "ALPHA",         required_argument, 0, 'A' },
-	{ "special",       required_argument, 0, 's' },
-	{ "utf8",          required_argument, 0, 'u' },
-	{ "UTF8",          required_argument, 0, 'U' },
-	{ "check-entropy", no_argument,       0, 'C' },
-	{ "count",         required_argument, 0, 'c' },
-	{ "entropy",       required_argument, 0, 'e' },
-	{ "length",        required_argument, 0, 'l' },
-	{ "no-policy",     no_argument,       0, 'n' },
-	{ "show-stats",    no_argument,       0, 'S' },
-	{ "table",         no_argument,       0, 't' },
-	{ "verbose",       no_argument,       0, 'v' },
-	{ 0, 0, 0, 0 },
+typedef enum {
+	OPT_END = -1,
+	OPT_UNDEFINED = 0,
+	OPT_INCOMPLETE,
+	OPT_HELP,
+	OPT_VERBOSE,
+	OPT_TABLE,
+	OPT_COUNT,
+	OPT_ENTROPY,
+	OPT_LENGTH,
+	OPT_SHOW_STATS,
+	OPT_CHECK_ENTROPY,
+	OPT_NO_POLICY,
+	OPT_ASCII_DIGIT,
+	OPT_ASCII_ALPHA_LOWER,
+	OPT_ASCII_ALPHA_UPPER,
+	OPT_ASCII_SPECIAL,
+	OPT_UTF8_DIGIT,
+	OPT_UTF8_ALPHA_LOWER,
+	OPT_UTF8_ALPHA_UPPER,
+	OPT_UTF8_SPECIAL,
+	OPT_SET_ASCII_DIGIT,
+	OPT_SET_ASCII_ALPHA_LOWER,
+	OPT_SET_ASCII_ALPHA_UPPER,
+	OPT_SET_ASCII_SPECIAL,
+	OPT_SET_UTF8_DIGIT,
+	OPT_SET_UTF8_ALPHA_LOWER,
+	OPT_SET_UTF8_ALPHA_UPPER,
+	OPT_SET_UTF8_SPECIAL,
+} option_id;
+
+typedef enum {
+	TYPE_UNDEFINED = -1,
+	TYPE_NONE = 0,
+	TYPE_REQUIRED,
+} argument_type;
+
+struct option {
+	option_id id;
+	argument_type argtype;
+	char *long_name;
+	char *short_name;
+	char *params;
+	char *description;
 };
+
+static struct option options[] = {
+	{ OPT_HELP,                  TYPE_NONE,     "help",                  "h",   "",              "Show this help and exit." },
+	{ OPT_VERBOSE,               TYPE_NONE,     "verbose",               "v",   "",              "Enable verbose mode." },
+	{ OPT_TABLE,                 TYPE_NONE,     "table",                 "t",   "",              "Display results in a table with entropy and statistics (implies -s)." },
+	{ OPT_COUNT,                 TYPE_REQUIRED, "count",                 "c",   "<count>",       "Number of passwords to generate." },
+	{ OPT_ENTROPY,               TYPE_REQUIRED, "entropy",               "e",   "<min>[:<max>]", "Select passwords with entropy in given range." },
+	{ OPT_LENGTH,                TYPE_REQUIRED, "length",                "l",   "<lengt>",       "Generate passwords of the given length." },
+	{ OPT_SHOW_STATS,            TYPE_NONE,     "show-stats",            "s",   "",              "Show entropy and statistics for generated passwords." },
+	{ OPT_CHECK_ENTROPY,         TYPE_NONE,     "check-entropy",         "C",   "",              "Check entropy of passwords supplied through stdin." },
+	{ OPT_NO_POLICY,             TYPE_NONE,     "no-policy",             "n",   "",              "Don't check the password policy." },
+	{ OPT_ASCII_DIGIT,           TYPE_REQUIRED, "ascii-digit",           "ad",  "<min>[:<max>]", "Include at least <min> ASCII digits in generated passwords but not more than <max>." },
+	{ OPT_ASCII_ALPHA_LOWER,     TYPE_REQUIRED, "ascii-alpha-lower",     "al",  "<min>[:<max>]", "Include at least <min> lower-case ASCII characters in generated passwords but not more than <max>." },
+	{ OPT_ASCII_ALPHA_UPPER,     TYPE_REQUIRED, "ascii-alpha-upper",     "au",  "<min>[:<max>]", "Include at least <min> lower-case ASCII characters in generated passwords but not more than <max>." },
+	{ OPT_ASCII_SPECIAL,         TYPE_REQUIRED, "ascii-special",         "as",  "<min>[:<max>]", "Include at least <min> special ASCII characters in generated passwords but not more than <max>." },
+	{ OPT_UTF8_DIGIT,            TYPE_REQUIRED, "utf8-digit",            "ud",  "<min>[:<max>]", "Include at least <min> UTF-8 digits in genrated passwords but not more than <max>." },
+	{ OPT_UTF8_ALPHA_LOWER,      TYPE_REQUIRED, "utf8-alpha-lower",      "ul",  "<min>[:<max>]", "Include at least <min> upper-case UTF-8 characters in generated passwords but not more than <max>." },
+	{ OPT_UTF8_ALPHA_UPPER,      TYPE_REQUIRED, "utf8-alpha-upper",      "uu",  "<min>[:<max>]", "Include at least <min> in generated passwords but not more than <max>." },
+	{ OPT_UTF8_SPECIAL,          TYPE_REQUIRED, "utf8-special",          "us",  "<min>[:<max>]", "Include at least <min> in generated passwords but not more than <max>." },
+	{ OPT_SET_ASCII_DIGIT,       TYPE_REQUIRED, "set-ascii-digit",       "sad", "<alphabet>",    "Set a custom alphabet for ASCII digits." },
+	{ OPT_SET_ASCII_ALPHA_LOWER, TYPE_REQUIRED, "set-ascii-alpha-lower", "sal", "<alphabet>",    "Set a custom alphabet for lower-case ASCII characters." },
+	{ OPT_SET_ASCII_ALPHA_UPPER, TYPE_REQUIRED, "set-ascii-alpha-upper", "sau", "<alphabet>",    "Set a custom alphabet for upper-case ASCII characters." },
+	{ OPT_SET_ASCII_SPECIAL,     TYPE_REQUIRED, "set-ascii-special",     "sas", "<alphabet>",    "Set a custom alphabet for special ASCII characters." },
+	{ OPT_SET_UTF8_DIGIT,        TYPE_REQUIRED, "set-utf8-digit",        "sud", "<alphabet>",    "Set a custom alphabet for UTF-8 digits." },
+	{ OPT_SET_UTF8_ALPHA_LOWER,  TYPE_REQUIRED, "set-utf8-alpha-lower",  "sul", "<alphabet>",    "Set a custom alphabet for lower-case UTF-8 characters." },
+	{ OPT_SET_UTF8_ALPHA_UPPER,  TYPE_REQUIRED, "set-utf8-alpha-upper",  "suu", "<alphabet>",    "Set a custom alphabet for upper-case UTF-8 characters." },
+	{ OPT_SET_UTF8_SPECIAL,      TYPE_REQUIRED, "set-utf8-special",      "sus", "<alphabet>",    "Set a custom alphabet for special UTF-8 characters." },
+};
+
+static size_t options_length = sizeof(options) / sizeof(*options);
 
 static void usage (struct config *conf, char *name)
 {
 	char *_name = PROG_NAME;
+	size_t i, options_length = sizeof(options) / sizeof(*options);
 
 	if (name && *name)
 		_name = name;
 
-	fprintf(stderr, "Usage:\n\t%s [options]\n\n"
-			"Where options might be a combination of:\n"
-			"\t-h, --help                  Show this help and exit.\n"
-			"\t-d, --digit <min>[:<max>]   Include at least <min> digits.\n"
-			"\t-a, --alpha <min>[:<max>]   Include at least <min> lower-case letters.\n"
-			"\t-A, --ALPHA <min>[:<max>]   Include at least <min> upper-case letters.\n"
-			"\t-s, --special <min>[:<max>] Include at least <min> special characters.\n"
-			"\t-u, --utf8 <min>[:<max>]    Include at least <min> lower-case UTF-8\n"
-			"\t                            characters.\n"
-			"\t-U, --UTF8 <min>[:<max>]    Include at least <min> upper-case UTF-8\n"
-			"\t                            characters.\n"
-			"\t-C, --check-entropy         Don't generate, instead check entropy of\n"
-			"\t                            passwords supplied through stdin.\n"
-			"\t-c, --count <num>           Number of passwords to generate.\n"
-			"\t-e, --entropy <min>[:<max>] Select passwords with entropy inside given\n"
-			"\t                            range.\n"
-			"\t-l, --length <num>          Password length.\n"
-			"\t-n, --no-policy             Don't check password policy.\n"
-			"\t-S, --show-stats            Show entropy and statistics for generated\n"
-			"\t                            passwords.\n"
-			"\t-t, --table                 Print passwords in a table with entropy and\n"
-			"\t                            statitistics (implies -S).\n"
-			"\t-v, --verbose               Verbose mode.\n"
-			"\n",
-			_name);
+	fprintf(stderr, "Usage:\n\t%s [options]\n\nWhere options might be a combination of:\n", _name);
+	for (i = 0; i < options_length; i++)
+		fprintf(stderr, "\t--%s, -%s\t%s\t%s\n",
+			options[i].long_name,
+			options[i].short_name,
+			options[i].params,
+			options[i].description);
 
 	close(conf->urandom_fd);
 	exit(EXIT_SUCCESS);
@@ -121,63 +160,183 @@ static int parse_range (struct config *conf, char *optarg, struct range *range, 
         return 0;
 }
 
+string_t *parse_alphabet (char *alphabet, string_t *string)
+{
+	int ret;
+
+	if (!alphabet || !*alphabet || !string) {
+		fprintf(stderr, "FATAL: Missing argument.\n");
+		exit(EXIT_FAILURE);
+		return NULL;
+	}
+
+	string->len = mbstowcs(NULL, alphabet, 0);
+	if (string->len == (size_t)-1) {
+		fprintf(stderr, "FATAL: Invalid multibyte sequence encountered, quitting.\n");
+		exit(EXIT_FAILURE);
+		return NULL;
+	}
+
+	string->val = calloc(string->len + 1, sizeof(wchar_t));
+	if (!string->val) {
+		perror("malloc failed");
+		exit(EXIT_FAILURE);
+		return NULL;
+	}
+
+	ret = swprintf(string->val, string->len + 1, L"%hs", alphabet);
+	if (ret < 0 || (unsigned)ret != string->len) {
+		perror("swprintf failed");
+		free(string->val);
+		exit(EXIT_FAILURE);
+		return NULL;
+	}
+
+	return string;
+}
+
+int get_opts (int argc, char **argv, struct option options[], size_t options_length, int *index, char **optarg)
+{
+	size_t i;
+	char *optstr;
+	*optarg = NULL;
+
+	if (!index)
+		return OPT_UNDEFINED;
+
+	if (*index >= argc)
+		return OPT_END;
+
+	if (!argc || !argv || !argv[*index] || argv[*index][0] != '-')
+		return OPT_UNDEFINED;
+
+	optstr = argv[*index];
+	while (*optstr && *optstr == '-')
+		optstr++;
+
+	for (i = 0; i < options_length; i++) {
+
+		if (strcmp(optstr, options[i].long_name) &&
+		    strcmp(optstr, options[i].short_name))
+			continue;
+
+		(*index)++;
+		if (options[i].argtype == TYPE_REQUIRED) {
+			//if (*index >= argc)
+			//	return OPT_INCOMPLETE;
+			//if (!argv[*index])
+			//	return OPT_INCOMPLETE;
+			*optarg = argv[*index];
+			(*index)++;
+		}
+
+		return options[i].id;
+	}
+
+	return OPT_UNDEFINED;
+}
+
 struct config *parse_opts (int argc, char **argv, struct config *conf)
 {
-	int c, err = 0, policy_set = 0;
+	int optval, index = 1;
+	//char *optstr;
+	char *optarg = NULL;
+	int err = 0, policy_set = 0;
 
-	conf->policy.pwdlen = DEFAULT_PASSWD_LEN;
-	conf->opt_passwd_count = DEFAULT_PASSWD_COUNT;
-	conf->opt_check_policy = 1;
+	conf->opt_check_policy          = 1;
+	conf->shuffle_passes            = 1;
+	conf->policy.pwdlen             = DEFAULT_PASSWD_LEN;
+	conf->opt_passwd_count          = DEFAULT_PASSWD_COUNT;
+	conf->opt_ascii_digit.val       = ASCII_DIGIT_CHARS;
+	conf->opt_ascii_digit.len       = ASCII_DIGIT_CHARS_LEN;
+	conf->opt_ascii_alpha_lower.val = ASCII_ALPHA_LOWER_CHARS;
+	conf->opt_ascii_alpha_lower.len = ASCII_ALPHA_LOWER_CHARS_LEN;
+	conf->opt_ascii_alpha_upper.val = ASCII_ALPHA_UPPER_CHARS;
+	conf->opt_ascii_alpha_upper.len = ASCII_ALPHA_UPPER_CHARS_LEN;
+	conf->opt_ascii_special.val     = ASCII_SPECIAL_CHARS;
+	conf->opt_ascii_special.len     = ASCII_SPECIAL_CHARS_LEN;
+	conf->opt_utf8_alpha_lower.val  = UTF8_ALPHA_LOWER_CHARS;
+	conf->opt_utf8_alpha_lower.len  = UTF8_ALPHA_LOWER_CHARS_LEN;
+	conf->opt_utf8_alpha_upper.val  = UTF8_ALPHA_UPPER_CHARS;
+	conf->opt_utf8_alpha_upper.len  = UTF8_ALPHA_UPPER_CHARS_LEN;
 
 	while (1) {
 
-		c = getopt_long(argc, argv, "hd:a:A:s:u:U:Cc:e:l:nStv", options, NULL);
-		if (c == -1)
+		//optstr = argv[index];
+		optval = get_opts(argc, argv, options, options_length, &index, &optarg);
+		//printf("DEBUG:  ARGC=%02d INDEX=%d ARGV[%d] = '%s' OPTARG = '%s'\n", argc, index, index, optstr, optarg);
+		if (optval == OPT_END)
 			break;
 
-		switch (c) {
+		switch (optval) {
 
-			case 'h':
+			case OPT_HELP:
 				usage(conf, argv[0]);
 				break;
 
-			case 'd':
-				err = parse_range(conf, optarg, &conf->policy.d, PARSE_INTEGER);
+			case OPT_ASCII_DIGIT:
+				err = parse_range(conf, optarg, &conf->policy.ascii_digit, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
-			case 'a':
-				err = parse_range(conf, optarg, &conf->policy.a, PARSE_INTEGER);
+			case OPT_ASCII_ALPHA_LOWER:
+				err = parse_range(conf, optarg, &conf->policy.ascii_alpha_lower, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
-			case 'A':
-				err = parse_range(conf, optarg, &conf->policy.A, PARSE_INTEGER);
+			case OPT_ASCII_ALPHA_UPPER:
+				err = parse_range(conf, optarg, &conf->policy.ascii_alpha_upper, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
-			case 's':
-				err = parse_range(conf, optarg, &conf->policy.s, PARSE_INTEGER);
+			case OPT_ASCII_SPECIAL:
+				err = parse_range(conf, optarg, &conf->policy.ascii_special, PARSE_INTEGER);
 				policy_set = 1;
 				break;
 
-			case 'u':
-				err = parse_range(conf, optarg, &conf->policy.u, PARSE_INTEGER);
+			case OPT_UTF8_ALPHA_LOWER:
+				err = parse_range(conf, optarg, &conf->policy.utf8_alpha_lower, PARSE_INTEGER);
+				policy_set = 1;
 				break;
 
-			case 'U':
-				err = parse_range(conf, optarg, &conf->policy.U, PARSE_INTEGER);
+			case OPT_UTF8_ALPHA_UPPER:
+				err = parse_range(conf, optarg, &conf->policy.utf8_alpha_upper, PARSE_INTEGER);
+				policy_set = 1;
 				break;
 
-			case 'C':
+			case OPT_SET_ASCII_DIGIT:
+				parse_alphabet(optarg, &conf->opt_ascii_digit);
+				break;
+
+			case OPT_SET_ASCII_ALPHA_LOWER:
+				parse_alphabet(optarg, &conf->opt_ascii_alpha_lower);
+				break;
+
+			case OPT_SET_ASCII_ALPHA_UPPER:
+				parse_alphabet(optarg, &conf->opt_ascii_alpha_upper);
+				break;
+
+			case OPT_SET_ASCII_SPECIAL:
+				parse_alphabet(optarg, &conf->opt_ascii_special);
+				break;
+
+			case OPT_SET_UTF8_ALPHA_LOWER:
+				parse_alphabet(optarg, &conf->opt_utf8_alpha_lower);
+				break;
+
+			case OPT_SET_UTF8_ALPHA_UPPER:
+				parse_alphabet(optarg, &conf->opt_utf8_alpha_lower);
+				break;
+
+			case OPT_CHECK_ENTROPY:
 				conf->opt_check_entropy = 1;
 				break;
 
-			case 'c':
+			case OPT_COUNT:
 				conf->opt_passwd_count = strtoul(optarg, NULL, 10);
 				break;
 
-			case 'e':
+			case OPT_ENTROPY:
 				conf->opt_entropy = 1;
 				if (!strcasecmp(optarg, "max")) {
 					conf->policy.entropy.min = (size_t)-1.0;
@@ -188,32 +347,40 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 				}
 				break;
 
-			case 'l':
+			case OPT_LENGTH:
 				conf->policy.pwdlen = strtoul(optarg, NULL, 10);
 				break;
 
-			case 'n':
+			case OPT_NO_POLICY:
 				conf->opt_check_policy = 0;
 				break;
 
-			case 'S':
+			case OPT_SHOW_STATS:
 				conf->opt_show_stats = 1;
 				break;
 
-			case 't':
+			case OPT_TABLE:
 				conf->opt_show_stats = 1;
 				conf->opt_table = 1;
 				break;
 
-			case 'v':
+			case OPT_VERBOSE:
 				conf->opt_verbose = 1;
 				break;
 
-			case '?':
+			case OPT_INCOMPLETE:
+				fprintf(stderr, "FATAL: Missing parameter for option: `%s'", argv[index]);
+				exit(EXIT_FAILURE);
+				break;
+
+			case OPT_UNDEFINED:
+				fprintf(stderr, "FATAL: Invalid parameter: `%s'", argv[index]);
+				exit(EXIT_FAILURE);
 				break;
 
 			default:
-				abort();
+				exit(EXIT_FAILURE);
+				break;
 		}
 
 		if (err)
@@ -221,12 +388,12 @@ struct config *parse_opts (int argc, char **argv, struct config *conf)
 	}
 
 	if (!policy_set) {
-		conf->policy.d.max = conf->policy.a.max = conf->policy.A.max = conf->policy.s.max = conf->policy.pwdlen;
+		conf->policy.ascii_digit.max = conf->policy.ascii_alpha_lower.max = conf->policy.ascii_alpha_upper.max = conf->policy.ascii_special.max = conf->policy.pwdlen;
 		switch (conf->policy.pwdlen) {
-			default: conf->policy.d.min = 1;
-			case 3:  conf->policy.s.min = 1;
-			case 2:  conf->policy.A.min = 1;
-			case 1:  conf->policy.a.min = 1;
+			default: conf->policy.ascii_digit.min = 1;
+			case 3:  conf->policy.ascii_special.min = 1;
+			case 2:  conf->policy.ascii_alpha_upper.min = 1;
+			case 1:  conf->policy.ascii_alpha_lower.min = 1;
 		}
 	}
 
