@@ -56,7 +56,7 @@ static unsigned int random_num (int urandom_fd, size_t rand_max)
 			exit(EXIT_FAILURE);
 		}
 	}
-	while (rand > limit);
+	while (rand >= limit);
 
 	//printf("UINT_MAX = %u, limit = %u, rand_max = %lu, RAND = %lu\n", UINT_MAX, limit, rand_max, (rand % rand_max));
 	return (rand % rand_max);
